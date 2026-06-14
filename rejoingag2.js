@@ -1,14 +1,13 @@
-// TERMUX AUTO REJOIN ROBLOX
+// TERMUX AUTO REJOIN ROBLOX (DIRECT PLACE ID)
 const axios = require("axios");
 const readline = require("readline");
 const { exec } = require("child_process");
 const fs = require("fs");
 
 // =========================
-// GAME LINK (BUKAN PRIVATE SERVER)
+// PLACE ID GAME
 // =========================
-const SERVER_LINK =
-  "https://www.roblox.com/games/97598239454123";
+const PLACE_ID = "97598239454123";
 
 const CHECK_INTERVAL = 15000; // 15 detik
 const REJOIN_AFTER = 60000; // 60 detik
@@ -45,13 +44,13 @@ function saveUserId(userId) {
 }
 
 // =========================
-// OPEN ROBLOX
+// OPEN ROBLOX DIRECT
 // =========================
 function openRoblox() {
   console.log("[INFO] Membuka Roblox...");
 
   exec(
-    `am start -a android.intent.action.VIEW -d "${SERVER_LINK}"`,
+    `am start -a android.intent.action.VIEW -d "roblox://placeId=${PLACE_ID}"`,
     (err) => {
       if (err) {
         console.log("[ERROR] Gagal membuka Roblox:", err.message);
@@ -91,7 +90,6 @@ async function getPresence(userId) {
 function startMonitoring(userId) {
   console.log(`[INFO] Monitoring User ID ${userId}`);
 
-  // Buka game saat pertama dijalankan
   openRoblox();
 
   let offlineSince = null;
@@ -103,17 +101,9 @@ function startMonitoring(userId) {
     if (!presence) return;
 
     const status = presence.userPresenceType;
-
-    /*
-      0 = Offline
-      1 = Online
-      2 = In Game
-      3 = In Studio
-    */
-
     const now = Date.now();
 
-    // Jika sedang di game
+    // 2 = In Game
     if (status === 2) {
       if (lastStatus !== 2) {
         console.log(
@@ -126,7 +116,6 @@ function startMonitoring(userId) {
       return;
     }
 
-    // Jika bukan di game
     if (lastStatus !== status) {
       console.log(
         `[${new Date().toLocaleTimeString()}] ⚠️ Tidak berada di game (status ${status})`
@@ -140,16 +129,13 @@ function startMonitoring(userId) {
       return;
     }
 
-    const elapsed = now - offlineSince;
-
-    if (elapsed >= REJOIN_AFTER) {
+    if (now - offlineSince >= REJOIN_AFTER) {
       console.log(
-        `[${new Date().toLocaleTimeString()}] 🔄 Sudah 60 detik tidak berada di game, membuka game kembali...`
+        `[${new Date().toLocaleTimeString()}] 🔄 Rejoin ke game...`
       );
 
       openRoblox();
 
-      // Reset timer agar tidak spam membuka game
       offlineSince = now;
     }
   }, CHECK_INTERVAL);
@@ -161,10 +147,7 @@ function startMonitoring(userId) {
 const savedUserId = getSavedUserId();
 
 if (savedUserId && !isNaN(savedUserId)) {
-  console.log(
-    `[INFO] Menggunakan User ID yang tersimpan: ${savedUserId}`
-  );
-
+  console.log(`[INFO] Menggunakan User ID: ${savedUserId}`);
   rl.close();
   startMonitoring(savedUserId);
 } else {
@@ -177,7 +160,6 @@ if (savedUserId && !isNaN(savedUserId)) {
     saveUserId(userId);
 
     rl.close();
-
     startMonitoring(userId);
   });
 }
