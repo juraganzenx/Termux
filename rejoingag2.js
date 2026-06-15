@@ -1,13 +1,11 @@
-// TERMUX AUTO REJOIN ROBLOX (DIRECT PLACE ID)
+//TERMUX DC V2
 const axios = require("axios");
 const readline = require("readline");
 const { exec } = require("child_process");
 const fs = require("fs");
 
-// =========================
-// PLACE ID GAME
-// =========================
-const PLACE_ID = "97598239454123";
+const SERVER_LINK =
+  "https://www.roblox.com/share?code=3797990503d9814b857cd800d84c311a&type=Server";
 
 const CHECK_INTERVAL = 15000; // 15 detik
 const REJOIN_AFTER = 60000; // 60 detik
@@ -44,13 +42,13 @@ function saveUserId(userId) {
 }
 
 // =========================
-// OPEN ROBLOX DIRECT
+// OPEN ROBLOX
 // =========================
 function openRoblox() {
   console.log("[INFO] Membuka Roblox...");
 
   exec(
-    `am start -a android.intent.action.VIEW -d "roblox://placeId=${PLACE_ID}"`,
+    `am start -a android.intent.action.VIEW -d "${SERVER_LINK}"`,
     (err) => {
       if (err) {
         console.log("[ERROR] Gagal membuka Roblox:", err.message);
@@ -101,41 +99,56 @@ function startMonitoring(userId) {
     if (!presence) return;
 
     const status = presence.userPresenceType;
+
+    /*
+      0 = Offline
+      1 = Online
+      2 = In Game
+      3 = In Studio
+    */
+
     const now = Date.now();
 
-    // 2 = In Game
+    // =========================
+    // IN GAME
+    // =========================
     if (status === 2) {
       if (lastStatus !== 2) {
         console.log(
           `[${new Date().toLocaleTimeString()}] ✅ Sedang di game`
         );
+        lastStatus = 2;
       }
 
-      lastStatus = 2;
       offlineSince = null;
       return;
     }
 
+    // =========================
+    // NOT IN GAME
+    // =========================
     if (lastStatus !== status) {
       console.log(
         `[${new Date().toLocaleTimeString()}] ⚠️ Tidak berada di game (status ${status})`
       );
-
       lastStatus = status;
     }
 
-    if (offlineSince === null) {
+    if (!offlineSince) {
       offlineSince = now;
       return;
     }
 
-    if (now - offlineSince >= REJOIN_AFTER) {
+    const elapsed = now - offlineSince;
+
+    if (elapsed >= REJOIN_AFTER) {
       console.log(
-        `[${new Date().toLocaleTimeString()}] 🔄 Rejoin ke game...`
+        `[${new Date().toLocaleTimeString()}] 🔄 Tidak berada di game lebih dari 60 detik. Rejoin...`
       );
 
       openRoblox();
 
+      // reset timer agar tidak spam rejoin
       offlineSince = now;
     }
   }, CHECK_INTERVAL);
@@ -147,7 +160,10 @@ function startMonitoring(userId) {
 const savedUserId = getSavedUserId();
 
 if (savedUserId && !isNaN(savedUserId)) {
-  console.log(`[INFO] Menggunakan User ID: ${savedUserId}`);
+  console.log(
+    `[INFO] Menggunakan User ID yang tersimpan: ${savedUserId}`
+  );
+
   rl.close();
   startMonitoring(savedUserId);
 } else {
@@ -160,6 +176,7 @@ if (savedUserId && !isNaN(savedUserId)) {
     saveUserId(userId);
 
     rl.close();
+
     startMonitoring(userId);
   });
 }
