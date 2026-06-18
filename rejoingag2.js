@@ -5,7 +5,7 @@ const { exec } = require("child_process");
 const fs = require("fs");
 
 const SERVER_LINK =
-  "https://www.roblox.com/share?code=3797990503d9814b857cd800d84c311a&type=Server";
+  "https://www.roblox.com/share?code=36d9b3e78a9dd04888662908230d803f&type=Server";
 
 const CHECK_INTERVAL = 15000; // 15 detik
 const REJOIN_AFTER = 60000; // 60 detik
