@@ -1,16 +1,18 @@
-//TERMUX DC V2
+// TERMUX AUTO REJOIN ROBLOX
 const axios = require("axios");
 const readline = require("readline");
 const { exec } = require("child_process");
 const fs = require("fs");
 
-const SERVER_LINK =
-  "https://www.roblox.com/share?code=36d9b3e78a9dd04888662908230d803f&type=Server";
+// =========================
+// GAME LINK (BUKAN PRIVATE SERVER)
+// =========================
 
 const CHECK_INTERVAL = 15000; // 15 detik
 const REJOIN_AFTER = 60000; // 60 detik
 
 const USER_FILE = "userid.txt";
+const SERVER_FILE = "privateserver.txt";
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -41,14 +43,35 @@ function saveUserId(userId) {
   }
 }
 
+function getSavedServerLink() {
+  try {
+    if (fs.existsSync(SERVER_FILE)) {
+      return fs.readFileSync(SERVER_FILE, "utf8").trim();
+    }
+  } catch (e) {
+    console.log("[ERROR] Gagal membaca Private Server Link:", e.message);
+  }
+
+  return null;
+}
+
+function saveServerLink(link) {
+  try {
+    fs.writeFileSync(SERVER_FILE, link);
+    console.log("[INFO] Private Server Link berhasil disimpan.");
+  } catch (e) {
+    console.log("[ERROR] Gagal menyimpan Private Server Link:", e.message);
+  }
+}
+
 // =========================
 // OPEN ROBLOX
 // =========================
-function openRoblox() {
+function openRoblox(serverLink) {
   console.log("[INFO] Membuka Roblox...");
 
   exec(
-    `am start -a android.intent.action.VIEW -d "${SERVER_LINK}"`,
+    `am start -a android.intent.action.VIEW -d "${serverLink}"`,
     (err) => {
       if (err) {
         console.log("[ERROR] Gagal membuka Roblox:", err.message);
@@ -85,10 +108,11 @@ async function getPresence(userId) {
 // =========================
 // START MONITOR
 // =========================
-function startMonitoring(userId) {
+function startMonitoring(userId, serverLink) {
   console.log(`[INFO] Monitoring User ID ${userId}`);
 
-  openRoblox();
+  // Buka game saat pertama dijalankan
+  openRoblox(serverLink);
 
   let offlineSince = null;
   let lastStatus = null;
@@ -109,32 +133,29 @@ function startMonitoring(userId) {
 
     const now = Date.now();
 
-    // =========================
-    // IN GAME
-    // =========================
+    // Jika sedang di game
     if (status === 2) {
       if (lastStatus !== 2) {
         console.log(
           `[${new Date().toLocaleTimeString()}] ✅ Sedang di game`
         );
-        lastStatus = 2;
       }
 
+      lastStatus = 2;
       offlineSince = null;
       return;
     }
 
-    // =========================
-    // NOT IN GAME
-    // =========================
+    // Jika bukan di game
     if (lastStatus !== status) {
       console.log(
         `[${new Date().toLocaleTimeString()}] ⚠️ Tidak berada di game (status ${status})`
       );
+
       lastStatus = status;
     }
 
-    if (!offlineSince) {
+    if (offlineSince === null) {
       offlineSince = now;
       return;
     }
@@ -143,12 +164,12 @@ function startMonitoring(userId) {
 
     if (elapsed >= REJOIN_AFTER) {
       console.log(
-        `[${new Date().toLocaleTimeString()}] 🔄 Tidak berada di game lebih dari 60 detik. Rejoin...`
+        `[${new Date().toLocaleTimeString()}] 🔄 Sudah 60 detik tidak berada di game, membuka game kembali...`
       );
 
-      openRoblox();
+      openRoblox(serverLink);
 
-      // reset timer agar tidak spam rejoin
+      // Reset timer agar tidak spam membuka game
       offlineSince = now;
     }
   }, CHECK_INTERVAL);
@@ -158,15 +179,9 @@ function startMonitoring(userId) {
 // MAIN
 // =========================
 const savedUserId = getSavedUserId();
+const savedServer = getSavedServerLink();
 
-if (savedUserId && !isNaN(savedUserId)) {
-  console.log(
-    `[INFO] Menggunakan User ID yang tersimpan: ${savedUserId}`
-  );
-
-  rl.close();
-  startMonitoring(savedUserId);
-} else {
+function askUserId(callback) {
   rl.question("Masukkan User ID Roblox: ", (userId) => {
     if (!userId || isNaN(userId)) {
       console.log("User ID tidak valid.");
@@ -174,9 +189,39 @@ if (savedUserId && !isNaN(savedUserId)) {
     }
 
     saveUserId(userId);
+    callback(userId);
+  });
+}
+
+function askServer(userId) {
+  rl.question("Masukkan Link Private Server: ", (serverLink) => {
+    if (!serverLink.startsWith("https://")) {
+      console.log("Link tidak valid.");
+      process.exit(1);
+    }
+
+    saveServerLink(serverLink);
 
     rl.close();
-
-    startMonitoring(userId);
+    startMonitoring(userId, serverLink);
   });
+}
+
+if (savedUserId && savedServer) {
+  console.log(`[INFO] User ID : ${savedUserId}`);
+  console.log(`[INFO] Private Server : ${savedServer}`);
+
+  rl.close();
+  startMonitoring(savedUserId, savedServer);
+} else if (!savedUserId && !savedServer) {
+  askUserId((uid) => {
+    askServer(uid);
+  });
+} else if (!savedUserId) {
+  askUserId((uid) => {
+    rl.close();
+    startMonitoring(uid, savedServer);
+  });
+} else {
+  askServer(savedUserId);
 }
