@@ -13,6 +13,7 @@ const SERVERS = [
   "https://www.roblox.com/share?code=6b9fbe28b269684f87c0115bab7ca23c&type=Server", //OTOOKO
   "https://www.roblox.com/share?code=03ceb8edb9f2064c8ca67022010c7822&type=Server", //AIRINMERAH
   "https://www.roblox.com/share?code=f47d43513419b445b5d8373271213ca4&type=Server", //1ottoko
+  "https://www.roblox.com/share?code=e3a2a9ff24c1ac479ea42600b20786f8&type=Server",
 
 ];
 
