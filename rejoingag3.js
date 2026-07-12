@@ -4,7 +4,7 @@ const fs = require("fs");
 const { exec } = require("child_process");
 
 const CONFIG_FILE = "accounts.json";
-const PLACE_ID = 126884695634066;
+const PLACE_ID = 97598239454123;
 
 const CHECK_INTERVAL = 10000;
 const REJOIN_AFTER = 30000;
