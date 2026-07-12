@@ -4,7 +4,6 @@ const fs = require("fs");
 const { exec } = require("child_process");
 
 const CONFIG_FILE = "accounts.json";
-const PLACE_ID = 97598239454123;
 
 const CHECK_INTERVAL = 10000;
 const REJOIN_AFTER = 30000;
@@ -14,6 +13,7 @@ const rl = readline.createInterface({
     output: process.stdout
 });
 
+
 function ask(question) {
     return new Promise(resolve => {
         rl.question(question, answer => {
@@ -22,18 +22,31 @@ function ask(question) {
     });
 }
 
-function extractCode(link) {
-    const match = link.match(/code=([a-zA-Z0-9]+)/i);
 
-    if (match) {
-        return match[1];
-    }
+// Ambil code dari link private server
+function extractCode(link) {
+
+    try {
+
+        const url = new URL(link);
+
+        const code = url.searchParams.get("code");
+
+        if (code) {
+            return code;
+        }
+
+    } catch {}
 
     return link.trim();
 }
 
+
+// Username Roblox -> UserId
 async function usernameToUserId(username) {
+
     try {
+
         const response = await axios.post(
             "https://users.roblox.com/v1/usernames/users",
             {
@@ -42,211 +55,372 @@ async function usernameToUserId(username) {
             }
         );
 
+
         if (!response.data.data.length) {
             return null;
         }
 
+
         return response.data.data[0].id;
-    } catch (err) {
+
+
+    } catch(err) {
+
         console.log(
-            `[ERROR] Username lookup gagal (${username})`
+            `[ERROR] Username lookup gagal ${username}`
         );
 
         return null;
     }
 }
 
+
+// Cek status Roblox
 async function getPresence(userId) {
+
     try {
+
         const response = await axios.post(
             "https://presence.roblox.com/v1/presence/users",
             {
-                userIds: [userId]
+                userIds:[userId]
             },
             {
-                timeout: 10000
+                timeout:10000
             }
         );
 
+
         return response.data.userPresences?.[0] || null;
-    } catch (err) {
+
+
+    } catch(err){
+
         console.log(
-            `[${userId}] Presence Error: ${err.message}`
+            `[${userId}] Presence error`
         );
 
         return null;
     }
 }
 
+
+
+// Open Roblox Private Server
 function openRoblox(account) {
-    const deepLink =
-        `roblox://placeID=${PLACE_ID}&code=${account.serverCode}`;
+
+
+    const link =
+    `https://www.roblox.com/share?code=${account.serverCode}&type=Server`;
+
 
     console.log("");
     console.log(
-        `[${account.username}] Membuka ${account.package}`
+        `[${account.username}] Restart Roblox`
     );
 
-    console.log(
-        `[${account.username}] ${deepLink}`
-    );
 
+    // STOP ROBLOX ROOT
     exec(
-        `am start -S -a android.intent.action.VIEW -d "${deepLink}" -p ${account.package}`,
-        (err) => {
-            if (err) {
+        `su -c "am force-stop ${account.package}"`,
+        (err)=>{
+
+
+            if(err){
+
                 console.log(
-                    `[${account.username}] ERROR: ${err.message}`
+                    `[${account.username}] Stop error ${err.message}`
                 );
-                return;
+
+            } else {
+
+                console.log(
+                    `[${account.username}] Roblox closed`
+                );
+
             }
 
-            console.log(
-                `[${account.username}] Launch command berhasil dikirim`
-            );
+
+
+            // tunggu sebelum buka lagi
+            setTimeout(()=>{
+
+
+                console.log(
+                    `[${account.username}] Opening private server`
+                );
+
+
+                exec(
+                    `am start -a android.intent.action.VIEW -d "${link}" -p ${account.package}`,
+                    (err)=>{
+
+
+                        if(err){
+
+                            console.log(
+                                `[${account.username}] Open error ${err.message}`
+                            );
+
+                            return;
+                        }
+
+
+                        console.log(
+                            `[${account.username}] Launch OK`
+                        );
+
+
+                    }
+                );
+
+
+            },3000);
+
+
+
         }
     );
+
 }
 
-function monitorAccount(account) {
+
+
+// Monitoring akun
+function monitorAccount(account){
+
+
     console.log(
         `[START] Monitoring ${account.username}`
     );
 
+
+    // buka pertama kali
     openRoblox(account);
 
-    setInterval(async () => {
-        const presence = await getPresence(
-            account.userId
-        );
 
-        if (!presence) {
+
+    setInterval(async()=>{
+
+
+        const presence =
+        await getPresence(account.userId);
+
+
+
+        if(!presence){
             return;
         }
 
+
         const status =
-            presence.userPresenceType;
+        presence.userPresenceType;
+
+
 
         const now = Date.now();
 
+
+
         /*
-        0 = Offline
-        1 = Online
-        2 = In Game
-        3 = In Studio
+            0 Offline
+            1 Online
+            2 In Game
+            3 Studio
         */
 
-        if (status === 2) {
-            if (account.lastStatus !== 2) {
+
+
+        if(status === 2){
+
+
+            if(account.lastStatus !== 2){
+
                 console.log(
                     `[${account.username}] ✅ In Game`
                 );
+
             }
+
 
             account.offlineSince = null;
             account.lastStatus = 2;
 
+
             return;
+
         }
 
-        if (account.lastStatus !== status) {
+
+
+        if(account.lastStatus !== status){
+
+
             console.log(
-                `[${account.username}] ⚠️ Status ${status}`
+                `[${account.username}] Status ${status}`
             );
 
-            account.lastStatus = status;
+
+            account.lastStatus=status;
+
         }
 
-        if (!account.offlineSince) {
+
+
+
+        if(!account.offlineSince){
+
             account.offlineSince = now;
+
             return;
+
         }
+
+
 
         const elapsed =
-            now - account.offlineSince;
+        now - account.offlineSince;
 
-        if (elapsed >= REJOIN_AFTER) {
+
+
+        if(elapsed >= REJOIN_AFTER){
+
+
             console.log(
                 `[${account.username}] 🔄 Rejoin`
             );
 
+
             openRoblox(account);
 
+
             account.offlineSince = now;
+
         }
 
-    }, CHECK_INTERVAL);
+
+
+    },CHECK_INTERVAL);
+
+
+
 }
 
-async function createConfig() {
-    const count = parseInt(
+
+
+// Buat config baru
+async function createConfig(){
+
+
+    const count =
+    parseInt(
         await ask(
-            "Berapa Roblox yang ingin digunakan?: "
+            "Berapa Roblox yang digunakan?: "
         )
     );
 
-    const accounts = [];
 
-    for (let i = 0; i < count; i++) {
+    const accounts=[];
+
+
+
+    for(let i=0;i<count;i++){
+
+
         console.log("");
         console.log(
-            `========== ROBLOX ${i + 1} ==========\n`
+            `===== ROBLOX ${i+1} =====`
         );
 
-        const packageName = await ask(
+
+        const packageName =
+        await ask(
             "Package Roblox: "
         );
 
-        const username = await ask(
+
+        const username =
+        await ask(
             "Username Roblox: "
         );
 
-        const privateServer = await ask(
+
+        const privateServer =
+        await ask(
             "Link Private Server: "
         );
 
-        const userId =
-            await usernameToUserId(username);
 
-        if (!userId) {
+
+        const userId =
+        await usernameToUserId(username);
+
+
+
+        if(!userId){
+
             console.log(
-                "Username tidak ditemukan."
+                "Username tidak ditemukan"
             );
 
             i--;
             continue;
+
         }
 
+
+
         accounts.push({
-            package: packageName,
-            username: username,
-            userId: userId,
-            serverCode: extractCode(
-                privateServer
-            ),
-            offlineSince: null,
-            lastStatus: null
+
+            package:packageName,
+
+            username:username,
+
+            userId:userId,
+
+            serverCode:
+            extractCode(privateServer),
+
+            offlineSince:null,
+
+            lastStatus:null
+
         });
+
+
     }
+
+
 
     fs.writeFileSync(
         CONFIG_FILE,
-        JSON.stringify(accounts, null, 2)
+        JSON.stringify(accounts,null,2)
     );
 
-    console.log("");
+
+
     console.log(
-        "[INFO] accounts.json berhasil dibuat."
+        "accounts.json dibuat"
     );
+
 
     return accounts;
+
 }
 
-async function loadAccounts() {
-    if (fs.existsSync(CONFIG_FILE)) {
+
+
+// Load config
+async function loadAccounts(){
+
+
+    if(fs.existsSync(CONFIG_FILE)){
+
+
         console.log(
-            "[INFO] Menggunakan accounts.json"
+            "Menggunakan accounts.json"
         );
+
 
         return JSON.parse(
             fs.readFileSync(
@@ -254,57 +428,95 @@ async function loadAccounts() {
                 "utf8"
             )
         );
+
+
     }
 
-    console.log(
-        "[INFO] accounts.json tidak ditemukan."
-    );
+
 
     return await createConfig();
+
 }
 
-async function main() {
+
+
+// Main
+async function main(){
+
+
     const accounts =
-        await loadAccounts();
+    await loadAccounts();
+
+
 
     rl.close();
 
+
+
     console.log("");
     console.log(
-        "========== CONFIG =========="
+        "===== ACCOUNT ====="
     );
 
-    for (const account of accounts) {
+
+
+    for(const acc of accounts){
+
+
         console.log("");
-        console.log(
-            `Package : ${account.package}`
-        );
 
         console.log(
-            `Username: ${account.username}`
+            "Package:",
+            acc.package
         );
 
-        console.log(
-            `UserId  : ${account.userId}`
-        );
 
         console.log(
-            `Code    : ${account.serverCode}`
+            "Username:",
+            acc.username
         );
+
+
+        console.log(
+            "UserId:",
+            acc.userId
+        );
+
+
+        console.log(
+            "Code:",
+            acc.serverCode
+        );
+
+
     }
 
+
+
     console.log("");
     console.log(
-        "Monitoring dimulai..."
+        "Monitoring berjalan..."
     );
 
+
+
     accounts.forEach(
-        (account, index) => {
-            setTimeout(() => {
-                monitorAccount(account);
-            }, index * 5000);
+        (acc,index)=>{
+
+
+            setTimeout(()=>{
+
+                monitorAccount(acc);
+
+            },index*5000);
+
+
         }
     );
+
+
 }
+
+
 
 main();
