@@ -82,30 +82,35 @@ function openRoblox(account) {
     const deepLink =
         `roblox://placeID=${PLACE_ID}&code=${account.serverCode}`;
 
-    console.log("");
-    console.log(
-        `[${account.username}] Membuka ${account.package}`
-    );
+    exec(`am force-stop ${account.package}`, () => {
 
-    console.log(
-        `[${account.username}] ${deepLink}`
-    );
+        setTimeout(() => {
 
-    exec(
-        `am start -a android.intent.action.VIEW -d "${deepLink}" -p ${account.package}`,
-        (err) => {
-            if (err) {
-                console.log(
-                    `[${account.username}] ERROR: ${err.message}`
-                );
-                return;
-            }
+            exec(
+                `monkey -p ${account.package} -c android.intent.category.LAUNCHER 1`,
+                () => {
 
-            console.log(
-                `[${account.username}] Launch command berhasil dikirim`
+                    setTimeout(() => {
+
+                        exec(
+                            `am start -W -a android.intent.action.VIEW -d "${deepLink}" -p ${account.package}`,
+                            (err) => {
+                                if (err) {
+                                    console.log(
+                                        `[${account.username}] ${err.message}`
+                                    );
+                                }
+                            }
+                        );
+
+                    }, 5000);
+
+                }
             );
-        }
-    );
+
+        }, 3000);
+
+    });
 }
 
 function monitorAccount(account) {
