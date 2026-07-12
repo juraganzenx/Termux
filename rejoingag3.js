@@ -79,56 +79,31 @@ async function getPresence(userId) {
 }
 
 function openRoblox(account) {
-
     const deepLink =
         `roblox://placeID=${PLACE_ID}&code=${account.serverCode}`;
 
+    console.log("");
     console.log(
-        `[${account.username}] Membuka aplikasi ${account.package}`
+        `[${account.username}] Membuka ${account.package}`
     );
 
-    // Buka Roblox dulu
-    exec(
-        `monkey -p ${account.package} -c android.intent.category.LAUNCHER 1`,
-        (err) => {
+    console.log(
+        `[${account.username}] ${deepLink}`
+    );
 
+    exec(
+        `am start -a android.intent.action.VIEW -d "${deepLink}" -p ${account.package}`,
+        (err) => {
             if (err) {
                 console.log(
-                    `[${account.username}] Gagal membuka app: ${err.message}`
+                    `[${account.username}] ERROR: ${err.message}`
                 );
                 return;
             }
 
             console.log(
-                `[${account.username}] App terbuka, tunggu loading...`
+                `[${account.username}] Launch command berhasil dikirim`
             );
-
-            // Tunggu Roblox siap
-            setTimeout(() => {
-
-                console.log(
-                    `[${account.username}] Mengirim private server link`
-                );
-
-                exec(
-                    `am start -a android.intent.action.VIEW -d "${deepLink}" -p ${account.package}`,
-                    (err) => {
-
-                        if (err) {
-                            console.log(
-                                `[${account.username}] Deep link error: ${err.message}`
-                            );
-                            return;
-                        }
-
-                        console.log(
-                            `[${account.username}] Deep link dikirim`
-                        );
-                    }
-                );
-
-            }, 5000);
-
         }
     );
 }
