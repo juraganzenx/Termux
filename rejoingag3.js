@@ -16,21 +16,25 @@ const rl = readline.createInterface({
 
 function ask(question) {
     return new Promise(resolve => {
-        rl.question(question, answer => resolve(answer.trim()));
+        rl.question(question, answer => {
+            resolve(answer.trim());
+        });
     });
 }
 
 function extractCode(link) {
-    const match = link.match(/code=([a-zA-Z0-9]+)/);
+    const match = link.match(/code=([a-zA-Z0-9]+)/i);
 
-    if (match) return match[1];
+    if (match) {
+        return match[1];
+    }
 
     return link.trim();
 }
 
 async function usernameToUserId(username) {
     try {
-        const res = await axios.post(
+        const response = await axios.post(
             "https://users.roblox.com/v1/usernames/users",
             {
                 usernames: [username],
@@ -38,18 +42,23 @@ async function usernameToUserId(username) {
             }
         );
 
-        if (!res.data.data.length) return null;
+        if (!response.data.data.length) {
+            return null;
+        }
 
-        return res.data.data[0].id;
+        return response.data.data[0].id;
     } catch (err) {
-        console.log(`[${username}] Lookup Error: ${err.message}`);
+        console.log(
+            `[ERROR] Username lookup gagal (${username})`
+        );
+
         return null;
     }
 }
 
 async function getPresence(userId) {
     try {
-        const res = await axios.post(
+        const response = await axios.post(
             "https://presence.roblox.com/v1/presence/users",
             {
                 userIds: [userId]
@@ -59,46 +68,65 @@ async function getPresence(userId) {
             }
         );
 
-        return res.data.userPresences?.[0] || null;
+        return response.data.userPresences?.[0] || null;
     } catch (err) {
-        console.log(`[${userId}] Presence Error: ${err.message}`);
+        console.log(
+            `[${userId}] Presence Error: ${err.message}`
+        );
+
         return null;
     }
 }
 
 function openRoblox(account) {
     const deepLink =
-        `roblox://placeID=${PLACE_ID}&linkCode=${account.serverCode}`;
+        `roblox://placeID=${PLACE_ID}&code=${account.serverCode}`;
 
+    console.log("");
     console.log(
         `[${account.username}] Membuka ${account.package}`
     );
 
+    console.log(
+        `[${account.username}] ${deepLink}`
+    );
+
     exec(
         `am start -a android.intent.action.VIEW -d "${deepLink}" -p ${account.package}`,
-        err => {
+        (err) => {
             if (err) {
                 console.log(
-                    `[${account.username}] Gagal membuka Roblox: ${err.message}`
+                    `[${account.username}] ERROR: ${err.message}`
                 );
+                return;
             }
+
+            console.log(
+                `[${account.username}] Launch command berhasil dikirim`
+            );
         }
     );
 }
 
 function monitorAccount(account) {
     console.log(
-        `[START] ${account.username} (${account.package})`
+        `[START] Monitoring ${account.username}`
     );
 
     openRoblox(account);
 
     setInterval(async () => {
-        const presence = await getPresence(account.userId);
+        const presence = await getPresence(
+            account.userId
+        );
 
-        if (!presence) return;
+        if (!presence) {
+            return;
+        }
 
-        const status = presence.userPresenceType;
+        const status =
+            presence.userPresenceType;
+
         const now = Date.now();
 
         /*
@@ -111,12 +139,13 @@ function monitorAccount(account) {
         if (status === 2) {
             if (account.lastStatus !== 2) {
                 console.log(
-                    `[${account.username}] ✅ Berhasil masuk game`
+                    `[${account.username}] ✅ In Game`
                 );
             }
 
             account.offlineSince = null;
             account.lastStatus = 2;
+
             return;
         }
 
@@ -133,7 +162,10 @@ function monitorAccount(account) {
             return;
         }
 
-        if (now - account.offlineSince >= REJOIN_AFTER) {
+        const elapsed =
+            now - account.offlineSince;
+
+        if (elapsed >= REJOIN_AFTER) {
             console.log(
                 `[${account.username}] 🔄 Rejoin`
             );
@@ -148,42 +180,50 @@ function monitorAccount(account) {
 
 async function createConfig() {
     const count = parseInt(
-        await ask("Berapa Roblox yang ingin digunakan? : ")
+        await ask(
+            "Berapa Roblox yang ingin digunakan?: "
+        )
     );
 
     const accounts = [];
 
     for (let i = 0; i < count; i++) {
         console.log("");
-        console.log("==============================");
-        console.log(`ROBLOX #${i + 1}`);
-        console.log("==============================");
+        console.log(
+            `========== ROBLOX ${i + 1} ==========\n`
+        );
 
         const packageName = await ask(
-            "Client apa? (contoh com.roblox.clienu): "
+            "Package Roblox: "
         );
 
         const username = await ask(
-            "Username apa?: "
+            "Username Roblox: "
         );
 
         const privateServer = await ask(
-            "Link Private Server apa?: "
+            "Link Private Server: "
         );
 
-        const userId = await usernameToUserId(username);
+        const userId =
+            await usernameToUserId(username);
 
         if (!userId) {
-            console.log("Username tidak ditemukan.");
+            console.log(
+                "Username tidak ditemukan."
+            );
+
             i--;
             continue;
         }
 
         accounts.push({
             package: packageName,
-            username,
-            userId,
-            serverCode: extractCode(privateServer),
+            username: username,
+            userId: userId,
+            serverCode: extractCode(
+                privateServer
+            ),
             offlineSince: null,
             lastStatus: null
         });
@@ -195,52 +235,76 @@ async function createConfig() {
     );
 
     console.log("");
-    console.log("Config berhasil disimpan.");
+    console.log(
+        "[INFO] accounts.json berhasil dibuat."
+    );
 
     return accounts;
 }
 
 async function loadAccounts() {
     if (fs.existsSync(CONFIG_FILE)) {
-        const useOld = await ask(
-            "Gunakan konfigurasi sebelumnya? (y/n): "
+        console.log(
+            "[INFO] Menggunakan accounts.json"
         );
 
-        if (useOld.toLowerCase() === "y") {
-            return JSON.parse(
-                fs.readFileSync(CONFIG_FILE, "utf8")
-            );
-        }
+        return JSON.parse(
+            fs.readFileSync(
+                CONFIG_FILE,
+                "utf8"
+            )
+        );
     }
+
+    console.log(
+        "[INFO] accounts.json tidak ditemukan."
+    );
 
     return await createConfig();
 }
 
 async function main() {
-    const accounts = await loadAccounts();
+    const accounts =
+        await loadAccounts();
 
     rl.close();
 
     console.log("");
-    console.log("========== CONFIG ==========");
+    console.log(
+        "========== CONFIG =========="
+    );
 
     for (const account of accounts) {
         console.log("");
-        console.log(`Package  : ${account.package}`);
-        console.log(`Username : ${account.username}`);
-        console.log(`User ID  : ${account.userId}`);
-        console.log(`PS Code  : ${account.serverCode}`);
+        console.log(
+            `Package : ${account.package}`
+        );
+
+        console.log(
+            `Username: ${account.username}`
+        );
+
+        console.log(
+            `UserId  : ${account.userId}`
+        );
+
+        console.log(
+            `Code    : ${account.serverCode}`
+        );
     }
 
     console.log("");
-    console.log("Monitoring dimulai...");
-    console.log("");
+    console.log(
+        "Monitoring dimulai..."
+    );
 
-    accounts.forEach((account, index) => {
-        setTimeout(() => {
-            monitorAccount(account);
-        }, index * 5000);
-    });
+    accounts.forEach(
+        (account, index) => {
+            setTimeout(() => {
+                monitorAccount(account);
+            }, index * 5000);
+        }
+    );
 }
 
 main();
