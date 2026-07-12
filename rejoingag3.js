@@ -92,7 +92,7 @@ function openRoblox(account) {
     );
 
     exec(
-        `am start -a android.intent.action.VIEW -d "${deepLink}" -p ${account.package}`,
+        `am start -S -a android.intent.action.VIEW -d "${deepLink}" -p ${account.package}`,
         (err) => {
             if (err) {
                 console.log(
