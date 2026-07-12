@@ -79,38 +79,58 @@ async function getPresence(userId) {
 }
 
 function openRoblox(account) {
+
     const deepLink =
         `roblox://placeID=${PLACE_ID}&code=${account.serverCode}`;
 
-    exec(`am force-stop ${account.package}`, () => {
+    console.log(
+        `[${account.username}] Membuka aplikasi ${account.package}`
+    );
 
-        setTimeout(() => {
+    // Buka Roblox dulu
+    exec(
+        `monkey -p ${account.package} -c android.intent.category.LAUNCHER 1`,
+        (err) => {
 
-            exec(
-                `monkey -p ${account.package} -c android.intent.category.LAUNCHER 1`,
-                () => {
+            if (err) {
+                console.log(
+                    `[${account.username}] Gagal membuka app: ${err.message}`
+                );
+                return;
+            }
 
-                    setTimeout(() => {
-
-                        exec(
-                            `am start -W -a android.intent.action.VIEW -d "${deepLink}" -p ${account.package}`,
-                            (err) => {
-                                if (err) {
-                                    console.log(
-                                        `[${account.username}] ${err.message}`
-                                    );
-                                }
-                            }
-                        );
-
-                    }, 5000);
-
-                }
+            console.log(
+                `[${account.username}] App terbuka, tunggu loading...`
             );
 
-        }, 3000);
+            // Tunggu Roblox siap
+            setTimeout(() => {
 
-    });
+                console.log(
+                    `[${account.username}] Mengirim private server link`
+                );
+
+                exec(
+                    `am start -a android.intent.action.VIEW -d "${deepLink}" -p ${account.package}`,
+                    (err) => {
+
+                        if (err) {
+                            console.log(
+                                `[${account.username}] Deep link error: ${err.message}`
+                            );
+                            return;
+                        }
+
+                        console.log(
+                            `[${account.username}] Deep link dikirim`
+                        );
+                    }
+                );
+
+            }, 5000);
+
+        }
+    );
 }
 
 function monitorAccount(account) {
