@@ -311,98 +311,83 @@ function monitorAccount(account){
 // Buat config baru
 async function createConfig(){
 
+    const packages = [
+        "com.roblox.clienu",
+        "com.roblox.clienv",
+        "com.roblox.clienw",
+        "com.roblox.clienx",
+        "com.roblox.clieny",
+        "com.roblox.clienz",
+        "com.roblox.cliens",
+        "com.roblox.clienr",
+        "com.roblox.clienq",
+        "com.roblox.clienp"
+    ];
 
-    const count =
-    parseInt(
-        await ask(
-            "Berapa Roblox yang digunakan?: "
-        )
+    const count = parseInt(
+        await ask("Berapa Roblox yang digunakan (1-10): ")
     );
 
+    if(isNaN(count) || count < 1 || count > packages.length){
+        console.log("Jumlah harus 1-10");
+        process.exit(0);
+    }
 
-    const accounts=[];
+    const accounts = [];
 
-
-
-    for(let i=0;i<count;i++){
-
+    for(let i = 0; i < count; i++){
 
         console.log("");
-        console.log(
-            `===== ROBLOX ${i+1} =====`
+        console.log(`===== ROBLOX ${i+1} =====`);
+        console.log(`Package : ${packages[i]}`);
+
+        const input = await ask(
+            "USERNAME-LINKPS : "
         );
 
+        const split = input.split("-");
 
-        const packageName =
-        await ask(
-            "Package Roblox: "
-        );
-
-
-        const username =
-        await ask(
-            "Username Roblox: "
-        );
-
-
-        const privateServer =
-        await ask(
-            "Link Private Server: "
-        );
-
-
-
-        const userId =
-        await usernameToUserId(username);
-
-
-
-        if(!userId){
-
-            console.log(
-                "Username tidak ditemukan"
-            );
-
+        if(split.length < 2){
+            console.log("Format salah!");
             i--;
             continue;
-
         }
 
+        const username = split.shift().trim();
+        const privateServer = split.join("-").trim();
 
+        const userId = await usernameToUserId(username);
+
+        if(!userId){
+            console.log("Username tidak ditemukan");
+            i--;
+            continue;
+        }
 
         accounts.push({
 
-            package:packageName,
+            package: packages[i],
 
-            username:username,
+            username: username,
 
-            userId:userId,
+            userId: userId,
 
-            serverCode:
-            extractCode(privateServer),
+            serverCode: extractCode(privateServer),
 
-            offlineSince:null,
+            offlineSince: null,
 
-            lastStatus:null
+            lastStatus: null
 
         });
 
-
     }
-
-
 
     fs.writeFileSync(
         CONFIG_FILE,
-        JSON.stringify(accounts,null,2)
+        JSON.stringify(accounts, null, 2)
     );
 
-
-
-    console.log(
-        "accounts.json dibuat"
-    );
-
+    console.log("accounts.json dibuat");
 
     return accounts;
 
