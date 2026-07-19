@@ -6,7 +6,7 @@ const { exec } = require("child_process");
 const CONFIG_FILE = "accounts.json";
 
 const CHECK_INTERVAL = 10000;
-const REJOIN_AFTER = 60000;
+const REJOIN_AFTER = 90000;
 
 const rl = readline.createInterface({
     input: process.stdin,
