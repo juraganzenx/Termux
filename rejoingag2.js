@@ -10,7 +10,6 @@ const fs = require("fs");
 // =========================
 const SERVERS = [
   "https://www.roblox.com/share?code=dd450e2e95594044a8283d0f27a646dc&type=Server", //BOT1
-  "https://www.roblox.com/share?code=4f914a18f9b7ea4eb46999d29bd19864&type=Server", //BOT2
   "https://www.roblox.com/share?code=bc3298a9e972a5438b8d25d2c6694ff4&type=Server", //BOT3
 
 
