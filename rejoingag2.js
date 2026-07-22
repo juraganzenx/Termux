@@ -9,11 +9,10 @@ const fs = require("fs");
 // PRIVATE SERVERS
 // =========================
 const SERVERS = [
-  "https://www.roblox.com/share?code=36d9b3e78a9dd04888662908230d803f&type=Server", //SANGJUKIE
-  "https://www.roblox.com/share?code=6b9fbe28b269684f87c0115bab7ca23c&type=Server", //OTOOKO
-  "https://www.roblox.com/share?code=03ceb8edb9f2064c8ca67022010c7822&type=Server", //AIRINMERAH
-  "https://www.roblox.com/share?code=f47d43513419b445b5d8373271213ca4&type=Server", //1ottoko
-  "https://www.roblox.com/share?code=e3a2a9ff24c1ac479ea42600b20786f8&type=Server",
+  "https://www.roblox.com/share?code=dd450e2e95594044a8283d0f27a646dc&type=Server", //BOT1
+  "https://www.roblox.com/share?code=4f914a18f9b7ea4eb46999d29bd19864&type=Server", //BOT2
+  "https://www.roblox.com/share?code=bc3298a9e972a5438b8d25d2c6694ff4&type=Server", //BOT3
+
 
 ];
 
