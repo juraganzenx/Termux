@@ -1,4 +1,4 @@
-// REJOINGAG3.aJS
+// REJOINGAG3.JS
 // PUBLIC + PRIVATE
 // BUKA 1 PER 1
 // AUTO RESIZE ROBLOX 5x2
@@ -1176,100 +1176,56 @@ function openRoblox(account) {
 // WAIT UNTIL IN GAME
 // =========================================
 
+const WAIT_GAME_TIMEOUT = 120000; // 2 menit
+
 function waitUntilInGame(account) {
 
     return new Promise(resolve => {
 
-
         console.log("");
+        console.log(`[${account.username}] Menunggu masuk game...`);
 
-        console.log(
+        const started = Date.now();
 
-            `[${account.username}] Menunggu masuk game...`
+        const check = setInterval(async () => {
 
-        );
+            const presence = await getPresence(account.userId);
 
+            if (!presence) {
+                return;
+            }
 
-        const check =
+            const status = presence.userPresenceType;
 
-            setInterval(
+            console.log(`[${account.username}] Presence: ${status}`);
 
-                async () => {
+            // Berhasil masuk game
+            if (status === 2) {
 
+                clearInterval(check);
 
-                    const presence =
+                account.offlineSince = null;
+                account.lastStatus = 2;
 
-                        await getPresence(
+                console.log("");
+                console.log(`[${account.username}] ✅ Berhasil masuk game`);
 
-                            account.userId
+                resolve(true);
+                return;
+            }
 
-                        );
+            // Timeout
+            if (Date.now() - started >= WAIT_GAME_TIMEOUT) {
 
+                clearInterval(check);
 
-                    if (!presence) {
+                console.log("");
+                console.log(`[${account.username}] ❌ Timeout masuk game`);
 
-                        return;
+                resolve(false);
+            }
 
-                    }
-
-
-                    const status =
-
-                        presence.userPresenceType;
-
-
-                    console.log(
-
-                        `[${account.username}] Presence: ${status}`
-
-                    );
-
-
-                    // =================================
-                    // IN GAME
-                    // =================================
-
-                    if (status === 2) {
-
-
-                        console.log("");
-
-                        console.log(
-
-                            `[${account.username}] ✅ Berhasil masuk game`
-
-                        );
-
-
-                        clearInterval(
-
-                            check
-
-                        );
-
-
-                        account.offlineSince =
-
-                            null;
-
-
-                        account.lastStatus =
-
-                            2;
-
-
-                        resolve(true);
-
-
-                    }
-
-
-                },
-
-                CHECK_INTERVAL
-
-            );
-
+        }, CHECK_INTERVAL);
 
     });
 
@@ -1347,11 +1303,25 @@ async function startAccount(account) {
     // WAIT IN GAME
     // =====================================
 
-    await waitUntilInGame(
+    let success = await waitUntilInGame(account);
 
-        account
+    while (!success) {
 
-    );
+        console.log("");
+        console.log(`[${account.username}] Force close lalu buka ulang...`);
+
+        await execSu(`am force-stop ${account.package}`);
+        await sleep(3000);
+
+        const launched = await openRoblox(account);
+
+        if (!launched) {
+            await sleep(5000);
+            continue;
+        }
+
+        success = await waitUntilInGame(account);
+    }
 
 
     console.log("");
@@ -1614,22 +1584,26 @@ function monitorAccount(account) {
                         // WAIT IN GAME
                         // =============================
 
-                        await waitUntilInGame(
+                        let success = await waitUntilInGame(account);
 
-                            account
+                        while (!success) {
 
-                        );
+                            console.log(`[${account.username}] Timeout, restart Roblox...`);
 
+                            await execSu(`am force-stop ${account.package}`);
+                            await sleep(3000);
 
-                        // =============================
-                        // RESIZE ULANG
-                        // =============================
+                            const launched = await openRoblox(account);
 
-                        await resizeRoblox(
+                            if (!launched) {
+                                await sleep(5000);
+                                continue;
+                            }
 
-                            account
+                            success = await waitUntilInGame(account);
+                        }
 
-                        );
+                        await resizeRoblox(account);
 
 
                         console.log("");
