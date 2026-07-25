@@ -1,3 +1,6 @@
+//REJOINGAG3.JS VERSI PUBLIK DAN PRIVATE
+//BUKA 1 PER 1 NUNGGU MASUK DULU
+
 const axios = require("axios");
 const readline = require("readline");
 const fs = require("fs");
@@ -14,304 +17,641 @@ const rl = readline.createInterface({
 });
 
 
+// =========================================
+// ASK INPUT
+// =========================================
+
 function ask(question) {
+
     return new Promise(resolve => {
+
         rl.question(question, answer => {
+
             resolve(answer.trim());
+
         });
+
     });
+
 }
 
 
-// Ambil code dari link private server
+// =========================================
+// EXTRACT PRIVATE SERVER CODE
+// =========================================
+
 function extractCode(link) {
 
     try {
 
         const url = new URL(link);
 
-        const code = url.searchParams.get("code");
+        const code =
+            url.searchParams.get("code");
 
         if (code) {
+
             return code;
+
         }
 
     } catch {}
 
     return link.trim();
+
 }
 
 
-// Username Roblox -> UserId
+// =========================================
+// USERNAME -> USERID
+// =========================================
+
 async function usernameToUserId(username) {
 
     try {
 
         const response = await axios.post(
+
             "https://users.roblox.com/v1/usernames/users",
+
             {
                 usernames: [username],
                 excludeBannedUsers: false
             }
+
         );
 
 
-        if (!response.data.data.length) {
+        if (
+            !response.data.data ||
+            !response.data.data.length
+        ) {
+
             return null;
+
         }
 
 
         return response.data.data[0].id;
 
 
-    } catch(err) {
+    } catch (err) {
 
         console.log(
-            `[ERROR] Username lookup gagal ${username}`
+            `[ERROR] Username lookup gagal: ${username}`
         );
 
         return null;
+
     }
+
 }
 
 
-// Cek status Roblox
+// =========================================
+// GET PRESENCE
+// =========================================
+
 async function getPresence(userId) {
 
     try {
 
         const response = await axios.post(
+
             "https://presence.roblox.com/v1/presence/users",
+
             {
-                userIds:[userId]
+                userIds: [userId]
             },
+
             {
-                timeout:10000
+                timeout: 10000
             }
+
         );
 
 
-        return response.data.userPresences?.[0] || null;
+        return (
+            response.data.userPresences?.[0]
+            || null
+        );
 
 
-    } catch(err){
+    } catch (err) {
 
         console.log(
             `[${userId}] Presence error`
         );
 
         return null;
+
     }
+
 }
 
 
+// =========================================
+// OPEN ROBLOX
+// PUBLIC / PRIVATE
+// =========================================
 
-// Open Roblox Private Server
 function openRoblox(account) {
 
-
-    const link =
-    `https://www.roblox.com/share?code=${account.serverCode}&type=Server`;
+    return new Promise((resolve) => {
 
 
-    console.log("");
-    console.log(
-        `[${account.username}] Restart Roblox`
-    );
+        console.log("");
+
+        console.log(
+            `[${account.username}] Restart Roblox`
+        );
 
 
-    // STOP ROBLOX ROOT
-    exec(
-        `su -c "am force-stop ${account.package}"`,
-        (err)=>{
+        // =====================================
+        // STOP ROBLOX
+        // =====================================
+
+        exec(
+
+            `su -c "am force-stop ${account.package}"`,
+
+            (err) => {
 
 
-            if(err){
+                if (err) {
 
-                console.log(
-                    `[${account.username}] Stop error ${err.message}`
-                );
+                    console.log(
+                        `[${account.username}] Stop error: ${err.message}`
+                    );
 
-            } else {
+                } else {
 
-                console.log(
-                    `[${account.username}] Roblox closed`
-                );
+                    console.log(
+                        `[${account.username}] Roblox closed`
+                    );
 
-            }
-
-
-
-            // tunggu sebelum buka lagi
-            setTimeout(()=>{
+                }
 
 
-                console.log(
-                    `[${account.username}] Opening private server`
-                );
+                // =================================
+                // WAIT 3 SECOND
+                // =================================
+
+                setTimeout(() => {
 
 
-                exec(
-                    `am start -a android.intent.action.VIEW -d "${link}" -p ${account.package}`,
-                    (err)=>{
+                    let link;
 
 
-                        if(err){
+                    // =================================
+                    // PUBLIC SERVER
+                    // =================================
 
-                            console.log(
-                                `[${account.username}] Open error ${err.message}`
-                            );
+                    if (
+                        account.serverType === "public"
+                    ) {
 
-                            return;
-                        }
+
+                        link =
+                            `https://www.roblox.com/games/start?placeId=${account.placeId}`;
+
+
+                        console.log("");
+
+                        console.log(
+                            `[${account.username}] Mode: PUBLIC`
+                        );
 
 
                         console.log(
-                            `[${account.username}] Launch OK`
+                            `[${account.username}] Place ID: ${account.placeId}`
                         );
 
 
                     }
-                );
 
 
-            },3000);
+                    // =================================
+                    // PRIVATE SERVER
+                    // =================================
+
+                    else {
 
 
+                        link =
+                            `https://www.roblox.com/share?code=${account.serverCode}&type=Server`;
 
-        }
-    );
+
+                        console.log("");
+
+                        console.log(
+                            `[${account.username}] Mode: PRIVATE SERVER`
+                        );
+
+
+                        console.log(
+                            `[${account.username}] Server Code: ${account.serverCode}`
+                        );
+
+
+                    }
+
+
+                    console.log("");
+
+                    console.log(
+                        `[${account.username}] Opening Roblox...`
+                    );
+
+
+                    console.log(
+                        `[${account.username}] Link: ${link}`
+                    );
+
+
+                    // =================================
+                    // OPEN ROBLOX
+                    // =================================
+
+                    const command =
+
+                        `am start -a android.intent.action.VIEW -d "${link}" -p ${account.package}`;
+
+
+                    console.log("");
+
+                    console.log(
+                        `[DEBUG] ${command}`
+                    );
+
+
+                    exec(
+
+                        command,
+
+                        (err) => {
+
+
+                            if (err) {
+
+
+                                console.log(
+
+                                    `[${account.username}] Open error: ${err.message}`
+
+                                );
+
+
+                                resolve(false);
+
+
+                                return;
+
+                            }
+
+
+                            console.log("");
+
+                            console.log(
+
+                                `[${account.username}] Launch OK`
+
+                            );
+
+
+                            resolve(true);
+
+
+                        }
+
+                    );
+
+
+                }, 3000);
+
+
+            }
+
+        );
+
+    });
 
 }
 
 
+// =========================================
+// WAIT UNTIL IN GAME
+// =========================================
 
-// Monitoring akun
-function monitorAccount(account){
+function waitUntilInGame(account) {
+
+    return new Promise((resolve) => {
+
+
+        console.log("");
+
+        console.log(
+
+            `[${account.username}] Menunggu masuk game...`
+
+        );
+
+
+        const check =
+
+            setInterval(
+
+                async () => {
+
+
+                    const presence =
+
+                        await getPresence(
+
+                            account.userId
+
+                        );
+
+
+                    if (!presence) {
+
+                        return;
+
+                    }
+
+
+                    const status =
+
+                        presence.userPresenceType;
+
+
+                    /*
+                        0 = Offline
+                        1 = Online
+                        2 = In Game
+                        3 = Studio
+                    */
+
+
+                    console.log(
+
+                        `[${account.username}] Presence: ${status}`
+
+                    );
+
+
+                    // =================================
+                    // IN GAME
+                    // =================================
+
+                    if (status === 2) {
+
+
+                        console.log("");
+
+                        console.log(
+
+                            `[${account.username}] ✅ Berhasil masuk game`
+
+                        );
+
+
+                        clearInterval(check);
+
+
+                        account.offlineSince =
+
+                            null;
+
+
+                        account.lastStatus =
+
+                            2;
+
+
+                        resolve(true);
+
+
+                    }
+
+
+                },
+
+                CHECK_INTERVAL
+
+            );
+
+
+    });
+
+}
+
+
+// =========================================
+// MONITOR ACCOUNT
+// =========================================
+
+function monitorAccount(account) {
 
 
     console.log(
+
         `[START] Monitoring ${account.username}`
+
     );
 
 
-    // buka pertama kali
-    openRoblox(account);
+    setInterval(
+
+        async () => {
 
 
+            const presence =
 
-    setInterval(async()=>{
+                await getPresence(
 
+                    account.userId
 
-        const presence =
-        await getPresence(account.userId);
-
-
-
-        if(!presence){
-            return;
-        }
-
-
-        const status =
-        presence.userPresenceType;
-
-
-
-        const now = Date.now();
-
-
-
-        /*
-            0 Offline
-            1 Online
-            2 In Game
-            3 Studio
-        */
-
-
-
-        if(status === 2){
-
-
-            if(account.lastStatus !== 2){
-
-                console.log(
-                    `[${account.username}] ✅ In Game`
                 );
+
+
+            if (!presence) {
+
+                return;
 
             }
 
 
-            account.offlineSince = null;
-            account.lastStatus = 2;
+            const status =
+
+                presence.userPresenceType;
 
 
-            return;
+            const now =
 
-        }
-
-
-
-        if(account.lastStatus !== status){
+                Date.now();
 
 
-            console.log(
-                `[${account.username}] Status ${status}`
-            );
+            /*
+                0 = Offline
+                1 = Online
+                2 = In Game
+                3 = Studio
+            */
 
 
-            account.lastStatus=status;
+            // =====================================
+            // IN GAME
+            // =====================================
 
-        }
-
-
-
-
-        if(!account.offlineSince){
-
-            account.offlineSince = now;
-
-            return;
-
-        }
+            if (status === 2) {
 
 
+                if (
 
-        const elapsed =
-        now - account.offlineSince;
+                    account.lastStatus !== 2
 
-
-
-        if(elapsed >= REJOIN_AFTER){
+                ) {
 
 
-            console.log(
-                `[${account.username}] 🔄 Rejoin`
-            );
+                    console.log(
+
+                        `[${account.username}] ✅ In Game`
+
+                    );
 
 
-            openRoblox(account);
+                }
 
 
-            account.offlineSince = now;
+                account.offlineSince =
 
-        }
-
-
-
-    },CHECK_INTERVAL);
+                    null;
 
 
+                account.lastStatus =
+
+                    2;
+
+
+                return;
+
+            }
+
+
+            // =====================================
+            // STATUS BERUBAH
+            // =====================================
+
+            if (
+
+                account.lastStatus !== status
+
+            ) {
+
+
+                console.log(
+
+                    `[${account.username}] Status ${status}`
+
+                );
+
+
+                account.lastStatus =
+
+                    status;
+
+
+            }
+
+
+            // =====================================
+            // MULAI HITUNG OFFLINE
+            // =====================================
+
+            if (
+
+                !account.offlineSince
+
+            ) {
+
+
+                account.offlineSince =
+
+                    now;
+
+
+                return;
+
+            }
+
+
+            // =====================================
+            // HITUNG DURASI
+            // =====================================
+
+            const elapsed =
+
+                now -
+
+                account.offlineSince;
+
+
+            // =====================================
+            // REJOIN SETELAH 90 DETIK
+            // =====================================
+
+            if (
+
+                elapsed >=
+
+                REJOIN_AFTER
+
+            ) {
+
+
+                console.log("");
+
+                console.log(
+
+                    `[${account.username}] 🔄 Rejoin`
+
+                );
+
+
+                openRoblox(
+
+                    account
+
+                );
+
+
+                account.offlineSince =
+
+                    now;
+
+
+            }
+
+
+        },
+
+        CHECK_INTERVAL
+
+    );
 
 }
 
 
+// =========================================
+// CREATE CONFIG
+// =========================================
 
-// Buat config baru
-async function createConfig(){
+async function createConfig() {
+
 
     const packages = [
+
         "com.roblox.clienu",
         "com.roblox.clienv",
         "com.roblox.clienw",
@@ -322,101 +662,410 @@ async function createConfig(){
         "com.roblox.clienr",
         "com.roblox.clienq",
         "com.roblox.clienp"
+
     ];
 
-    const count = parseInt(
-        await ask("Berapa Roblox yang digunakan (1-10): ")
-    );
 
-    if(isNaN(count) || count < 1 || count > packages.length){
-        console.log("Jumlah harus 1-10");
+    const count =
+
+        parseInt(
+
+            await ask(
+
+                "Berapa Roblox yang digunakan (1-10): "
+
+            )
+
+        );
+
+
+    if (
+
+        isNaN(count) ||
+
+        count < 1 ||
+
+        count > packages.length
+
+    ) {
+
+
+        console.log(
+
+            "Jumlah harus 1-10"
+
+        );
+
+
         process.exit(0);
+
     }
+
 
     const accounts = [];
 
-    for(let i = 0; i < count; i++){
+
+    // =========================================
+    // INPUT ACCOUNT
+    // =========================================
+
+    for (
+
+        let i = 0;
+
+        i < count;
+
+        i++
+
+    ) {
+
 
         console.log("");
-        console.log(`===== ROBLOX ${i+1} =====`);
-        console.log(`Package : ${packages[i]}`);
 
-        const input = await ask(
-            "USERNAME-LINKPS : "
+        console.log(
+
+            `===== ROBLOX ${i + 1} =====`
+
         );
 
-        const split = input.split("-");
 
-        if(split.length < 2){
-            console.log("Format salah!");
-            i--;
+        console.log(
+
+            `Package : ${packages[i]}`
+
+        );
+
+
+        console.log("");
+
+        console.log(
+
+            "Format Public : username-public-PLACE_ID"
+
+        );
+
+
+        console.log(
+
+            "Format Private: username-LINK_PRIVATE_SERVER"
+
+        );
+
+
+        console.log("");
+
+
+        const input =
+
+            await ask(
+
+                "USERNAME-SERVER : "
+
+            );
+
+
+        // =====================================
+        // CEK PUBLIC
+        // =====================================
+
+        const publicMatch =
+
+            input.match(
+
+                /^([^-]+)-public-(\d+)$/
+
+            );
+
+
+        if (publicMatch) {
+
+
+            const username =
+
+                publicMatch[1].trim();
+
+
+            const placeId =
+
+                publicMatch[2].trim();
+
+
+            console.log("");
+
+            console.log(
+
+                `[${username}] Mode PUBLIC`
+
+            );
+
+
+            console.log(
+
+                `Place ID: ${placeId}`
+
+            );
+
+
+            // =================================
+            // GET USER ID
+            // =================================
+
+            const userId =
+
+                await usernameToUserId(
+
+                    username
+
+                );
+
+
+            if (!userId) {
+
+
+                console.log(
+
+                    "Username tidak ditemukan"
+
+                );
+
+
+                i--;
+
+                continue;
+
+            }
+
+
+            accounts.push({
+
+                package:
+
+                    packages[i],
+
+                username:
+
+                    username,
+
+                userId:
+
+                    userId,
+
+                serverType:
+
+                    "public",
+
+                placeId:
+
+                    placeId,
+
+                serverCode:
+
+                    null,
+
+                offlineSince:
+
+                    null,
+
+                lastStatus:
+
+                    null
+
+            });
+
+
             continue;
+
         }
 
-        const username = split.shift().trim();
-        const privateServer = split.join("-").trim();
 
-        const userId = await usernameToUserId(username);
+        // =====================================
+        // PRIVATE SERVER
+        // =====================================
 
-        if(!userId){
-            console.log("Username tidak ditemukan");
+        const split =
+
+            input.split("-");
+
+
+        if (
+
+            split.length < 2
+
+        ) {
+
+
+            console.log(
+
+                "Format salah!"
+
+            );
+
+
             i--;
+
             continue;
+
         }
+
+
+        const username =
+
+            split.shift().trim();
+
+
+        const privateServer =
+
+            split.join("-").trim();
+
+
+        // =================================
+        // GET USER ID
+        // =================================
+
+        const userId =
+
+            await usernameToUserId(
+
+                username
+
+            );
+
+
+        if (!userId) {
+
+
+            console.log(
+
+                "Username tidak ditemukan"
+
+            );
+
+
+            i--;
+
+            continue;
+
+        }
+
 
         accounts.push({
 
-            package: packages[i],
+            package:
 
-            username: username,
+                packages[i],
 
-            userId: userId,
+            username:
 
-            serverCode: extractCode(privateServer),
+                username,
 
-            offlineSince: null,
+            userId:
 
-            lastStatus: null
+                userId,
+
+            serverType:
+
+                "private",
+
+            placeId:
+
+                null,
+
+            serverCode:
+
+                extractCode(
+
+                    privateServer
+
+                ),
+
+            offlineSince:
+
+                null,
+
+            lastStatus:
+
+                null
 
         });
 
+
     }
 
+
+    // =========================================
+    // SAVE CONFIG
+    // =========================================
+
     fs.writeFileSync(
+
         CONFIG_FILE,
-        JSON.stringify(accounts, null, 2)
+
+        JSON.stringify(
+
+            accounts,
+
+            null,
+
+            2
+
+        )
+
     );
 
-    console.log("accounts.json dibuat");
+
+    console.log("");
+
+    console.log(
+
+        "accounts.json dibuat"
+
+    );
+
 
     return accounts;
 
 }
 
 
+// =========================================
+// LOAD CONFIG
+// =========================================
 
-// Load config
-async function loadAccounts(){
+async function loadAccounts() {
 
 
-    if(fs.existsSync(CONFIG_FILE)){
+    if (
+
+        fs.existsSync(
+
+            CONFIG_FILE
+
+        )
+
+    ) {
 
 
         console.log(
+
             "Menggunakan accounts.json"
+
         );
 
 
         return JSON.parse(
+
             fs.readFileSync(
+
                 CONFIG_FILE,
+
                 "utf8"
+
             )
+
         );
 
 
     }
-
 
 
     return await createConfig();
@@ -424,84 +1073,309 @@ async function loadAccounts(){
 }
 
 
+// =========================================
+// MAIN
+// =========================================
 
-// Main
-async function main(){
+async function main() {
 
+
+    // =========================================
+    // LOAD ACCOUNTS
+    // =========================================
 
     const accounts =
-    await loadAccounts();
 
+        await loadAccounts();
 
 
     rl.close();
 
 
+    // =========================================
+    // SHOW ACCOUNT
+    // =========================================
 
     console.log("");
+
     console.log(
+
         "===== ACCOUNT ====="
+
     );
 
 
+    for (
 
-    for(const acc of accounts){
+        const acc of accounts
+
+    ) {
 
 
         console.log("");
 
         console.log(
+
             "Package:",
+
             acc.package
+
         );
 
 
         console.log(
+
             "Username:",
+
             acc.username
+
         );
 
 
         console.log(
+
             "UserId:",
+
             acc.userId
+
         );
 
 
         console.log(
-            "Code:",
-            acc.serverCode
+
+            "Type:",
+
+            acc.serverType
+
+        );
+
+
+        if (
+
+            acc.serverType ===
+
+            "public"
+
+        ) {
+
+
+            console.log(
+
+                "Place ID:",
+
+                acc.placeId
+
+            );
+
+
+        } else {
+
+
+            console.log(
+
+                "Code:",
+
+                acc.serverCode
+
+            );
+
+
+        }
+
+
+    }
+
+
+    // =========================================
+    // START
+    // =========================================
+
+    console.log("");
+
+    console.log(
+
+        "===== STARTING ROBLOX BERURUTAN ====="
+
+    );
+
+
+    // =========================================
+    // OPEN ONE BY ONE
+    // =========================================
+
+    for (
+
+        let i = 0;
+
+        i < accounts.length;
+
+        i++
+
+    ) {
+
+
+        const acc =
+
+            accounts[i];
+
+
+        console.log("");
+
+        console.log(
+
+            "========================================"
+
+        );
+
+
+        console.log(
+
+            `ROBLOX ${i + 1}/${accounts.length}`
+
+        );
+
+
+        console.log(
+
+            `USERNAME: ${acc.username}`
+
+        );
+
+
+        console.log(
+
+            `TYPE: ${acc.serverType}`
+
+        );
+
+
+        console.log(
+
+            "========================================"
+
+        );
+
+
+        // =====================================
+        // OPEN ROBLOX
+        // =====================================
+
+        const launched =
+
+            await openRoblox(
+
+                acc
+
+            );
+
+
+        if (!launched) {
+
+
+            console.log(
+
+                `[${acc.username}] ❌ Gagal launch`
+
+            );
+
+
+            continue;
+
+        }
+
+
+        // =====================================
+        // WAIT IN GAME
+        // =====================================
+
+        await waitUntilInGame(
+
+            acc
+
+        );
+
+
+        console.log("");
+
+        console.log(
+
+            `[${acc.username}] ✅ Siap`
+
+        );
+
+
+        console.log(
+
+            "Lanjut membuka akun berikutnya..."
+
         );
 
 
     }
 
 
+    // =========================================
+    // ALL ACCOUNT READY
+    // =========================================
 
     console.log("");
+
     console.log(
-        "Monitoring berjalan..."
+
+        "========================================"
+
     );
 
 
+    console.log(
+
+        "✅ SEMUA ROBLOX SUDAH MASUK GAME"
+
+    );
+
+
+    console.log(
+
+        "========================================"
+
+    );
+
+
+    console.log("");
+
+    console.log(
+
+        "Monitoring berjalan..."
+
+    );
+
+
+    // =========================================
+    // START MONITORING
+    // =========================================
 
     accounts.forEach(
-        (acc,index)=>{
+
+        (acc) => {
 
 
-            setTimeout(()=>{
+            monitorAccount(
 
-                monitorAccount(acc);
+                acc
 
-            },index*5000);
+            );
 
 
         }
+
     );
 
 
 }
 
 
+// =========================================
+// RUN
+// =========================================
 
 main();
