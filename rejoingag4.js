@@ -95,7 +95,9 @@ function ask(question) {
             answer => {
 
                 resolve(
+
                     answer.trim()
+
                 );
 
             }
@@ -127,6 +129,14 @@ function execSu(command) {
                         `[SU ERROR] ${err.message}`
                     );
 
+                    if (stderr) {
+
+                        console.log(
+                            `[SU STDERR] ${stderr.trim()}`
+                        );
+
+                    }
+
                     resolve(null);
 
                     return;
@@ -134,10 +144,33 @@ function execSu(command) {
                 }
 
                 resolve(
+
                     stdout.trim()
+
                 );
 
             }
+
+        );
+
+    });
+
+}
+
+
+// =========================================
+// SLEEP
+// =========================================
+
+function sleep(ms) {
+
+    return new Promise(resolve => {
+
+        setTimeout(
+
+            resolve,
+
+            ms
 
         );
 
@@ -374,6 +407,8 @@ function getRobloxSlot(account) {
 
 async function getTaskId(packageName) {
 
+    console.log("");
+
     console.log(
 
         `[${packageName}] Mencari Task ID...`
@@ -403,10 +438,6 @@ async function getTaskId(packageName) {
     }
 
 
-    // =====================================
-    // ESCAPE REGEX
-    // =====================================
-
     const escapedPackage =
 
         packageName.replace(
@@ -417,10 +448,6 @@ async function getTaskId(packageName) {
 
         );
 
-
-    // =====================================
-    // CARI TASK ID
-    // =====================================
 
     const regex =
 
@@ -444,9 +471,11 @@ async function getTaskId(packageName) {
 
     if (!match) {
 
+        console.log("");
+
         console.log(
 
-            `[${packageName}] Task ID tidak ditemukan`
+            `[${packageName}] ❌ Task ID tidak ditemukan`
 
         );
 
@@ -466,6 +495,8 @@ async function getTaskId(packageName) {
         );
 
 
+    console.log("");
+
     console.log(
 
         `[${packageName}] Task ID: ${taskId}`
@@ -474,6 +505,186 @@ async function getTaskId(packageName) {
 
 
     return taskId;
+
+}
+
+
+// =========================================
+// GET ROBLOX ACTIVITY STATE
+// =========================================
+
+async function debugRobloxWindow(packageName) {
+
+    console.log("");
+
+    console.log(
+
+        `[${packageName}] ===== DEBUG WINDOW =====`
+
+    );
+
+
+    const output =
+
+        await execSu(
+
+            `dumpsys window windows | grep -i -A 35 -B 3 '${packageName}'`
+
+        );
+
+
+    if (!output) {
+
+        console.log(
+
+            `[${packageName}] Tidak ada output window`
+
+        );
+
+        return;
+
+    }
+
+
+    console.log("");
+
+    console.log(output);
+
+    console.log("");
+
+    console.log(
+
+        `[${packageName}] ===== END DEBUG =====`
+
+    );
+
+}
+
+
+// =========================================
+// FORCE ROBLOX FREEFORM
+// =========================================
+
+async function forceRobloxFreeform(
+
+    packageName,
+
+    taskId
+
+) {
+
+    console.log("");
+
+    console.log(
+
+        `[${packageName}] Mengaktifkan Freeform...`
+
+    );
+
+
+    console.log(
+
+        `[${packageName}] Task ID: ${taskId}`
+
+    );
+
+
+    // =====================================
+    // PINDAHKAN TASK KE FREEFORM
+    // =====================================
+
+    const command =
+
+        `am task move-to-front ${taskId}`;
+
+    
+    console.log("");
+
+    console.log(
+
+        `[${packageName}] Move task to front:`
+
+    );
+
+
+    console.log(
+
+        command
+
+    );
+
+
+    await execSu(
+
+        command
+
+    );
+
+
+    await sleep(
+
+        500
+
+    );
+
+
+    // =====================================
+    // FORCE WINDOWING MODE 5
+    // =====================================
+
+    const freeformCommand =
+
+        `am start --windowingMode 5 --activity-clear-top ` +
+
+        `-n ${packageName}/com.roblox.client.ActivityProtocolLaunch`;
+
+
+    console.log("");
+
+    console.log(
+
+        `[${packageName}] Freeform command:`
+
+    );
+
+
+    console.log(
+
+        freeformCommand
+
+    );
+
+
+    const result =
+
+        await execSu(
+
+            freeformCommand
+
+        );
+
+
+    if (result === null) {
+
+        console.log("");
+
+        console.log(
+
+            `[${packageName}] ⚠️ Freeform command error`
+
+        );
+
+    }
+
+
+    await sleep(
+
+        1000
+
+    );
+
+
+    return true;
 
 }
 
@@ -504,9 +715,11 @@ async function resizeRoblox(account) {
 
     if (!slot) {
 
+        console.log("");
+
         console.log(
 
-            `[${packageName}] Slot tidak ditemukan`
+            `[${packageName}] ❌ Slot tidak ditemukan`
 
         );
 
@@ -519,74 +732,42 @@ async function resizeRoblox(account) {
 
     console.log(
 
-        `[${packageName}] Menyiapkan resize...`
+        "========================================"
 
     );
 
 
     console.log(
 
-        `[${packageName}] Slot: ${slot.index + 1}/10`
+        `[${packageName}] RESIZE ROBLOX`
 
     );
 
 
     console.log(
 
-        `[${packageName}] X: ${slot.x}`
+        `Slot     : ${slot.index + 1}/10`
 
     );
 
 
     console.log(
 
-        `[${packageName}] Y: ${slot.y}`
+        `Position : ${slot.x},${slot.y}`
 
     );
 
 
     console.log(
 
-        `[${packageName}] Size: ${slot.width}x${slot.height}`
+        `Size     : ${slot.width}x${slot.height}`
 
     );
 
-
-    // =====================================
-    // FORCE FREEFORM
-    // =====================================
-
-    console.log("");
 
     console.log(
 
-        `[${packageName}] Mengaktifkan Freeform...`
-
-    );
-
-
-    await execSu(
-
-        `am start --windowingMode 5 -n ${packageName}/com.roblox.client.ActivityProtocolLaunch`
-
-    );
-
-
-    // =====================================
-    // WAIT TASK
-    // =====================================
-
-    await new Promise(
-
-        resolve =>
-
-            setTimeout(
-
-                resolve,
-
-                1000
-
-            )
+        "========================================"
 
     );
 
@@ -595,7 +776,7 @@ async function resizeRoblox(account) {
     // GET TASK ID
     // =====================================
 
-    const taskId =
+    let taskId =
 
         await getTaskId(
 
@@ -606,16 +787,67 @@ async function resizeRoblox(account) {
 
     if (!taskId) {
 
+        console.log("");
+
+        console.log(
+
+            `[${packageName}] Task belum ditemukan`
+
+        );
+
+
         return false;
 
     }
 
 
     // =====================================
-    // RESIZE
+    // FORCE FREEFORM
     // =====================================
 
-    const command =
+    await forceRobloxFreeform(
+
+        packageName,
+
+        taskId
+
+    );
+
+
+    // =====================================
+    // GET TASK ID ULANG
+    // =====================================
+
+    taskId =
+
+        await getTaskId(
+
+            packageName
+
+        );
+
+
+    if (!taskId) {
+
+        console.log("");
+
+        console.log(
+
+            `[${packageName}] Task ID hilang setelah Freeform`
+
+        );
+
+
+        return false;
+
+    }
+
+
+    // =====================================
+    // RESIZE TASK
+    // =====================================
+
+    const resizeCommand =
 
         `am task resize ${taskId} ` +
 
@@ -632,14 +864,16 @@ async function resizeRoblox(account) {
 
     console.log(
 
-        `[${packageName}] Resize command:`
+        `[${packageName}] Menjalankan resize...`
 
     );
 
 
+    console.log("");
+
     console.log(
 
-        command
+        `[COMMAND] ${resizeCommand}`
 
     );
 
@@ -648,7 +882,7 @@ async function resizeRoblox(account) {
 
         await execSu(
 
-            command
+            resizeCommand
 
         );
 
@@ -659,34 +893,52 @@ async function resizeRoblox(account) {
 
         console.log(
 
-            `[${packageName}] ❌ Resize gagal`
+            `[${packageName}] ❌ Resize command gagal`
 
         );
+
 
         return false;
 
     }
 
 
+    // =====================================
+    // WAIT
+    // =====================================
+
+    await sleep(
+
+        1000
+
+    );
+
+
+    // =====================================
+    // DEBUG HASIL
+    // =====================================
+
     console.log("");
 
     console.log(
 
-        `[${packageName}] ✅ Resize berhasil`
+        `[${packageName}] Mengecek hasil resize...`
 
     );
 
 
-    console.log(
+    await debugRobloxWindow(
 
-        `[${packageName}] Posisi: ${slot.x},${slot.y}`
+        packageName
 
     );
 
 
+    console.log("");
+
     console.log(
 
-        `[${packageName}] Ukuran: ${slot.width}x${slot.height}`
+        `[${packageName}] ✅ Resize command selesai`
 
     );
 
@@ -715,9 +967,9 @@ function openRoblox(account) {
         );
 
 
-        // =====================================
+        // =================================
         // STOP ROBLOX
-        // =====================================
+        // =================================
 
         exec(
 
@@ -746,7 +998,7 @@ function openRoblox(account) {
 
 
                 // =================================
-                // WAIT 3 SECOND
+                // WAIT
                 // =================================
 
                 setTimeout(() => {
@@ -756,7 +1008,7 @@ function openRoblox(account) {
 
 
                     // =================================
-                    // PUBLIC SERVER
+                    // PUBLIC
                     // =================================
 
                     if (
@@ -793,7 +1045,7 @@ function openRoblox(account) {
 
 
                     // =================================
-                    // PRIVATE SERVER
+                    // PRIVATE
                     // =================================
 
                     else {
@@ -832,6 +1084,8 @@ function openRoblox(account) {
                     );
 
 
+                    console.log("");
+
                     console.log(
 
                         `[${account.username}] Link: ${link}`
@@ -845,7 +1099,9 @@ function openRoblox(account) {
 
                     const command =
 
-                        `am start -a android.intent.action.VIEW ` +
+                        `am start ` +
+
+                        `-a android.intent.action.VIEW ` +
 
                         `-d "${link}" ` +
 
@@ -871,15 +1127,16 @@ function openRoblox(account) {
                             if (err) {
 
 
+                                console.log("");
+
                                 console.log(
 
-                                    `[${account.username}] Open error: ${err.message}`
+                                    `[${account.username}] ❌ Open error: ${err.message}`
 
                                 );
 
 
                                 resolve(false);
-
 
                                 return;
 
@@ -890,7 +1147,7 @@ function openRoblox(account) {
 
                             console.log(
 
-                                `[${account.username}] Launch OK`
+                                `[${account.username}] ✅ Launch OK`
 
                             );
 
@@ -959,14 +1216,6 @@ function waitUntilInGame(account) {
                     const status =
 
                         presence.userPresenceType;
-
-
-                    /*
-                        0 = Offline
-                        1 = Online
-                        2 = In Game
-                        3 = Studio
-                    */
 
 
                     console.log(
@@ -1081,6 +1330,8 @@ async function startAccount(account) {
 
     if (!launched) {
 
+        console.log("");
+
         console.log(
 
             `[${account.username}] ❌ Gagal launch`
@@ -1113,23 +1364,59 @@ async function startAccount(account) {
 
 
     // =====================================
-    // RESIZE
+    // WAIT EXTRA
     // =====================================
-
-    await resizeRoblox(
-
-        account
-
-    );
-
 
     console.log("");
 
     console.log(
 
-        `[${account.username}] ✅ Resize selesai`
+        `[${account.username}] Menunggu 2 detik sebelum resize...`
 
     );
+
+
+    await sleep(
+
+        2000
+
+    );
+
+
+    // =====================================
+    // RESIZE
+    // =====================================
+
+    const resized =
+
+        await resizeRoblox(
+
+            account
+
+        );
+
+
+    if (!resized) {
+
+        console.log("");
+
+        console.log(
+
+            `[${account.username}] ⚠️ Resize gagal`
+
+        );
+
+    } else {
+
+        console.log("");
+
+        console.log(
+
+            `[${account.username}] ✅ Resize selesai`
+
+        );
+
+    }
 
 
     return true;
@@ -1182,14 +1469,6 @@ function monitorAccount(account) {
             const now =
 
                 Date.now();
-
-
-            /*
-                0 = Offline
-                1 = Online
-                2 = In Game
-                3 = Studio
-            */
 
 
             // =====================================
@@ -1490,7 +1769,7 @@ async function createConfig() {
 
 
         // =====================================
-        // CEK PUBLIC
+        // PUBLIC
         // =====================================
 
         const publicMatch =
