@@ -3,14 +3,14 @@ const { exec } = require("child_process");
 
 const ROBLOX = [
     {
-        package: "com.roblox.clienu",
+        package: "com.roblox.clienv",
         x: 0,
         y: 0,
         width: 256,
         height: 360
     },
     {
-        package: "com.roblox.clienv",
+        package: "com.roblox.clienu",
         x: 256,
         y: 0,
         width: 256,
