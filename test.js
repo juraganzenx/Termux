@@ -1,4 +1,3 @@
-//test
 const { exec } = require("child_process");
 
 const ROBLOX = [
@@ -17,6 +16,11 @@ const ROBLOX = [
         height: 360
     }
 ];
+
+
+// =========================================
+// EXEC SU COMMAND
+// =========================================
 
 function execSu(command) {
 
@@ -48,10 +52,33 @@ function execSu(command) {
 
 }
 
-async function getTaskId(packageName) {
+
+// =========================================
+// WAIT
+// =========================================
+
+function wait(ms) {
+
+    return new Promise(
+        resolve => setTimeout(
+            resolve,
+            ms
+        )
+    );
+
+}
+
+
+// =========================================
+// GET ALL TASKS
+// =========================================
+
+async function getAllTasks(packageName) {
+
+    console.log("");
 
     console.log(
-        `[DEBUG] Mencari Task ID: ${packageName}`
+        `[DEBUG] Mencari semua Task ${packageName}`
     );
 
     const output = await execSu(
@@ -61,115 +88,469 @@ async function getTaskId(packageName) {
     if (!output) {
 
         console.log(
-            "[ERROR] dumpsys tidak menghasilkan output"
+            "[ERROR] dumpsys gagal"
         );
 
-        return null;
+        return [];
 
     }
 
-    const escapedPackage =
-        packageName.replace(
-            /[.*+?^${}()|[\]\\]/g,
-            "\\$&"
-        );
 
-    const regex = new RegExp(
-        `Task id #(\\d+)[\\s\\S]{0,1000}?A=${escapedPackage}`,
-        "m"
-    );
+    const lines =
+        output.split("\n");
 
-    const match = output.match(regex);
 
-    if (!match) {
+    const tasks = [];
 
-        console.log(
-            `[ERROR] Task ID ${packageName} tidak ditemukan`
-        );
 
-        return null;
+    let currentTaskId = null;
+
+    let currentBlock = "";
+
+
+    for (
+        let i = 0;
+        i < lines.length;
+        i++
+    ) {
+
+        const line =
+            lines[i];
+
+
+        const taskMatch =
+            line.match(
+                /Task id #(\d+)/
+            );
+
+
+        if (taskMatch) {
+
+            if (
+                currentTaskId !== null &&
+                currentBlock.includes(
+                    packageName
+                )
+            ) {
+
+                tasks.push(
+                    currentTaskId
+                );
+
+            }
+
+
+            currentTaskId =
+                parseInt(
+                    taskMatch[1],
+                    10
+                );
+
+
+            currentBlock =
+                line;
+
+
+            continue;
+
+        }
+
+
+        if (
+            currentTaskId !== null
+        ) {
+
+            currentBlock +=
+                "\n" +
+                line;
+
+        }
 
     }
 
-    const taskId = parseInt(
-        match[1],
-        10
-    );
 
-    console.log(
-        `[DEBUG] ${packageName} Task ID: ${taskId}`
-    );
+    // =====================================
+    // CEK TASK TERAKHIR
+    // =====================================
 
-    return taskId;
+    if (
+        currentTaskId !== null &&
+        currentBlock.includes(
+            packageName
+        )
+    ) {
 
-}
+        tasks.push(
+            currentTaskId
+        );
 
-async function openRoblox(packageName) {
+    }
+
+
+    // =====================================
+    // REMOVE DUPLICATE
+    // =====================================
+
+    const uniqueTasks =
+        [...new Set(tasks)];
+
 
     console.log("");
 
     console.log(
-        `[DEBUG] Membuka ${packageName}`
+        `[DEBUG] ${packageName} memiliki ${uniqueTasks.length} Task`
     );
+
+
+    for (
+        const taskId of uniqueTasks
+    ) {
+
+        console.log(
+            `[DEBUG] Task ditemukan: ${taskId}`
+        );
+
+    }
+
+
+    return uniqueTasks;
+
+}
+
+
+// =========================================
+// GET ACTIVE TASK
+// =========================================
+
+async function getActiveTask(
+    packageName
+) {
+
+    console.log("");
+
+    console.log(
+        `[DEBUG] Mencari Task aktif ${packageName}`
+    );
+
+
+    const output = await execSu(
+        "dumpsys activity activities"
+    );
+
+
+    if (!output) {
+
+        return null;
+
+    }
+
+
+    const lines =
+        output.split("\n");
+
+
+    let currentTaskId =
+        null;
+
+
+    let currentBlock =
+        "";
+
+
+    const candidates = [];
+
+
+    for (
+        let i = 0;
+        i < lines.length;
+        i++
+    ) {
+
+        const line =
+            lines[i];
+
+
+        const taskMatch =
+            line.match(
+                /Task id #(\d+)/
+            );
+
+
+        if (taskMatch) {
+
+            if (
+                currentTaskId !== null &&
+                currentBlock.includes(
+                    packageName
+                )
+            ) {
+
+                candidates.push({
+                    taskId:
+                        currentTaskId,
+
+                    block:
+                        currentBlock
+                });
+
+            }
+
+
+            currentTaskId =
+                parseInt(
+                    taskMatch[1],
+                    10
+                );
+
+
+            currentBlock =
+                line;
+
+
+            continue;
+
+        }
+
+
+        if (
+            currentTaskId !== null
+        ) {
+
+            currentBlock +=
+                "\n" +
+                line;
+
+        }
+
+    }
+
+
+    if (
+        currentTaskId !== null &&
+        currentBlock.includes(
+            packageName
+        )
+    ) {
+
+        candidates.push({
+            taskId:
+                currentTaskId,
+
+            block:
+                currentBlock
+        });
+
+    }
+
+
+    if (
+        candidates.length === 0
+    ) {
+
+        console.log(
+            `[ERROR] Tidak ada Task ${packageName}`
+        );
+
+        return null;
+
+    }
+
+
+    // =====================================
+    // PRINT CANDIDATES
+    // =====================================
+
+    console.log("");
+
+    console.log(
+        `[DEBUG] Candidate Task ${packageName}:`
+    );
+
+
+    for (
+        const candidate of candidates
+    ) {
+
+        const resumed =
+            candidate.block.includes(
+                "mResumedActivity"
+            );
+
+
+        console.log(
+            `Task ${candidate.taskId}` +
+            (
+                resumed
+                    ? " <-- RESUMED"
+                    : ""
+            )
+        );
+
+    }
+
+
+    // =====================================
+    // PRIORITAS TASK TERAKHIR
+    // =====================================
+
+    const selected =
+        candidates[
+            candidates.length - 1
+        ];
+
+
+    console.log("");
+
+    console.log(
+        `[DEBUG] Menggunakan Task ID: ${selected.taskId}`
+    );
+
+
+    return selected.taskId;
+
+}
+
+
+// =========================================
+// OPEN ROBLOX
+// =========================================
+
+async function openRoblox(
+    packageName
+) {
+
+    console.log("");
+
+    console.log(
+        "========================================"
+    );
+
+    console.log(
+        `[DEBUG] OPEN ${packageName}`
+    );
+
+    console.log(
+        "========================================"
+    );
+
+
+    // =====================================
+    // FORCE STOP
+    // =====================================
+
+    console.log(
+        `[DEBUG] Force stop ${packageName}`
+    );
+
+
+    await execSu(
+        `am force-stop ${packageName}`
+    );
+
+
+    await wait(
+        1000
+    );
+
+
+    // =====================================
+    // START FREEFORM
+    // =====================================
+
+    console.log(
+        `[DEBUG] Start Freeform ${packageName}`
+    );
+
 
     await execSu(
         `am start --windowingMode 5 -n ${packageName}/com.roblox.client.ActivityProtocolLaunch`
     );
 
-    await new Promise(
-        resolve =>
-            setTimeout(
-                resolve,
-                5000
-            )
+
+    console.log(
+        `[DEBUG] Menunggu Roblox...`
+    );
+
+
+    await wait(
+        7000
     );
 
 }
 
-async function resizeRoblox(config) {
 
-    const taskId = await getTaskId(
-        config.package
-    );
+// =========================================
+// RESIZE
+// =========================================
+
+async function resizeRoblox(
+    config
+) {
+
+    const taskId =
+        await getActiveTask(
+            config.package
+        );
+
 
     if (!taskId) {
+
+        console.log(
+            `[FAILED] Task ${config.package} tidak ditemukan`
+        );
 
         return false;
 
     }
 
+
     console.log("");
 
     console.log(
-        `[DEBUG] Resize ${config.package}`
+        "========================================"
     );
 
     console.log(
-        `Task ID : ${taskId}`
+        `[DEBUG] RESIZE ${config.package}`
     );
 
     console.log(
-        `X       : ${config.x}`
+        `Task   : ${taskId}`
     );
 
     console.log(
-        `Y       : ${config.y}`
+        `X      : ${config.x}`
     );
 
     console.log(
-        `Width   : ${config.width}`
+        `Y      : ${config.y}`
     );
 
     console.log(
-        `Height  : ${config.height}`
+        `Width  : ${config.width}`
     );
+
+    console.log(
+        `Height : ${config.height}`
+    );
+
+    console.log(
+        "========================================"
+    );
+
+
+    // =====================================
+    // FORCE RESIZE
+    // =====================================
 
     const command =
-        `am task resize ${taskId} ` +
+        `am task resize ` +
+        `${taskId} ` +
         `${config.x} ` +
         `${config.y} ` +
         `${config.width} ` +
         `${config.height}`;
+
 
     console.log("");
 
@@ -177,27 +558,80 @@ async function resizeRoblox(config) {
         `[DEBUG] ${command}`
     );
 
-    const result = await execSu(
-        command
-    );
 
-    if (result === null) {
+    const result =
+        await execSu(
+            command
+        );
+
+
+    if (
+        result === null
+    ) {
 
         console.log(
-            `[FAILED] ${config.package}`
+            `[FAILED] Resize ${config.package}`
         );
 
         return false;
 
     }
 
+
+    console.log("");
+
     console.log(
-        `[SUCCESS] ${config.package}`
+        `[SUCCESS] Resize command dikirim`
     );
+
+
+    // =====================================
+    // TUNGGU
+    // =====================================
+
+    await wait(
+        2000
+    );
+
+
+    // =====================================
+    // CEK WINDOW
+    // =====================================
+
+    console.log("");
+
+    console.log(
+        `[DEBUG] Mengecek Window ${config.package}`
+    );
+
+
+    const windowOutput =
+        await execSu(
+            `dumpsys window windows | grep -i "${config.package}" -A 20`
+        );
+
+
+    if (
+        windowOutput
+    ) {
+
+        console.log("");
+
+        console.log(
+            windowOutput
+        );
+
+    }
+
 
     return true;
 
 }
+
+
+// =========================================
+// MAIN
+// =========================================
 
 async function main() {
 
@@ -208,44 +642,41 @@ async function main() {
     );
 
     console.log(
-        "ROBLOX 2 WINDOW DEBUG"
+        "ROBLOX 2 RESIZE DEBUG"
     );
 
     console.log(
         "========================================"
     );
 
+
     // =====================================
-    // BUKA ROBLOX 1
+    // ROBLOX 1
     // =====================================
 
     await openRoblox(
         ROBLOX[0].package
     );
 
-    // =====================================
-    // RESIZE ROBLOX 1
-    // =====================================
 
     await resizeRoblox(
         ROBLOX[0]
     );
 
+
     // =====================================
-    // BUKA ROBLOX 2
+    // ROBLOX 2
     // =====================================
 
     await openRoblox(
         ROBLOX[1].package
     );
 
-    // =====================================
-    // RESIZE ROBLOX 2
-    // =====================================
 
     await resizeRoblox(
         ROBLOX[1]
     );
+
 
     console.log("");
 
@@ -254,7 +685,7 @@ async function main() {
     );
 
     console.log(
-        "SELESAI"
+        "DEBUG SELESAI"
     );
 
     console.log(
@@ -262,5 +693,6 @@ async function main() {
     );
 
 }
+
 
 main();
