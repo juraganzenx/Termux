@@ -1,19 +1,40 @@
 const { exec } = require("child_process");
 
+const WINDOW_WIDTH = 256;
+const WINDOW_HEIGHT = 360;
+
+const COLUMNS = 5;
+
 const ROBLOXES = [
     {
-        package: "com.roblox.clienu",
-        x: 0,
-        y: 0,
-        width: 256,
-        height: 360
+        package: "com.roblox.clienu"
     },
     {
-        package: "com.roblox.clienv",
-        x: 256,
-        y: 0,
-        width: 256,
-        height: 360
+        package: "com.roblox.clienv"
+    },
+    {
+        package: "com.roblox.clienw"
+    },
+    {
+        package: "com.roblox.clienx"
+    },
+    {
+        package: "com.roblox.clieny"
+    },
+    {
+        package: "com.roblox.clienz"
+    },
+    {
+        package: "com.roblox.cliens"
+    },
+    {
+        package: "com.roblox.clienr"
+    },
+    {
+        package: "com.roblox.clienq"
+    },
+    {
+        package: "com.roblox.clienp"
     }
 ];
 
@@ -43,7 +64,9 @@ function execSu(command) {
 
                 }
 
-                resolve(stdout.trim());
+                resolve(
+                    stdout.trim()
+                );
 
             }
         );
@@ -54,18 +77,65 @@ function execSu(command) {
 
 
 // =========================================
+// GET ROBLOX SLOT
+// =========================================
+
+function getRobloxSlot(index) {
+
+    const row =
+        Math.floor(
+            index / COLUMNS
+        );
+
+    const column =
+        index % COLUMNS;
+
+
+    const x =
+        column *
+        WINDOW_WIDTH;
+
+
+    const y =
+        row *
+        WINDOW_HEIGHT;
+
+
+    return {
+
+        x: x,
+
+        y: y,
+
+        width:
+            WINDOW_WIDTH,
+
+        height:
+            WINDOW_HEIGHT
+
+    };
+
+}
+
+
+// =========================================
 // GET TASK ID
 // =========================================
 
 async function getTaskId(packageName) {
 
+    console.log("");
+
     console.log(
         `[DEBUG] Mencari Task ID: ${packageName}`
     );
 
-    const output = await execSu(
-        `dumpsys activity activities`
-    );
+
+    const output =
+        await execSu(
+            "dumpsys activity activities"
+        );
+
 
     if (!output) {
 
@@ -78,19 +148,24 @@ async function getTaskId(packageName) {
     }
 
 
-    const escapedPackage = packageName.replace(
-        /[.*+?^${}()|[\]\\]/g,
-        "\\$&"
-    );
+    const escapedPackage =
+        packageName.replace(
+            /[.*+?^${}()|[\]\\]/g,
+            "\\$&"
+        );
 
 
-    const regex = new RegExp(
-        `Task id #(\\d+)[\\s\\S]{0,1000}?A=${escapedPackage}`,
-        "m"
-    );
+    const regex =
+        new RegExp(
+            `Task id #(\\d+)[\\s\\S]{0,1000}?A=${escapedPackage}`,
+            "m"
+        );
 
 
-    const match = output.match(regex);
+    const match =
+        output.match(
+            regex
+        );
 
 
     if (!match) {
@@ -104,10 +179,11 @@ async function getTaskId(packageName) {
     }
 
 
-    const taskId = parseInt(
-        match[1],
-        10
-    );
+    const taskId =
+        parseInt(
+            match[1],
+            10
+        );
 
 
     console.log(
@@ -116,6 +192,54 @@ async function getTaskId(packageName) {
 
 
     return taskId;
+
+}
+
+
+// =========================================
+// OPEN ROBLOX
+// =========================================
+
+async function openRoblox(packageName) {
+
+    console.log("");
+
+    console.log(
+        "========================================"
+    );
+
+    console.log(
+        `[DEBUG] Membuka ${packageName}`
+    );
+
+    console.log(
+        "========================================"
+    );
+
+
+    const result =
+        await execSu(
+            `am start --windowingMode 5 -n ${packageName}/com.roblox.client.ActivityProtocolLaunch`
+        );
+
+
+    if (result === null) {
+
+        console.log(
+            `[FAILED] Gagal membuka ${packageName}`
+        );
+
+        return false;
+
+    }
+
+
+    console.log(
+        `[SUCCESS] ${packageName} berhasil dibuka`
+    );
+
+
+    return true;
 
 }
 
@@ -132,9 +256,10 @@ async function resizeRoblox(
     height
 ) {
 
-    const taskId = await getTaskId(
-        packageName
-    );
+    const taskId =
+        await getTaskId(
+            packageName
+        );
 
 
     if (!taskId) {
@@ -172,7 +297,11 @@ async function resizeRoblox(
 
 
     const command =
-        `am task resize ${taskId} ${x} ${y} ${width} ${height}`;
+        `am task resize ${taskId} ` +
+        `${x} ` +
+        `${y} ` +
+        `${width} ` +
+        `${height}`;
 
 
     console.log("");
@@ -182,9 +311,10 @@ async function resizeRoblox(
     );
 
 
-    const result = await execSu(
-        command
-    );
+    const result =
+        await execSu(
+            command
+        );
 
 
     if (result !== null) {
@@ -194,6 +324,7 @@ async function resizeRoblox(
         console.log(
             `[SUCCESS] ${packageName} berhasil di-resize`
         );
+
 
         return true;
 
@@ -213,26 +344,136 @@ async function resizeRoblox(
 
 
 // =========================================
-// OPEN ROBLOX
+// WAIT
 // =========================================
 
-async function openRoblox(packageName) {
+function wait(ms) {
+
+    return new Promise(
+        resolve =>
+            setTimeout(
+                resolve,
+                ms
+            )
+    );
+
+}
+
+
+// =========================================
+// OPEN + RESIZE 1 ROBLOX
+// =========================================
+
+async function startRoblox(
+    roblox,
+    index
+) {
+
+    const packageName =
+        roblox.package;
+
+
+    const slot =
+        getRobloxSlot(
+            index
+        );
+
 
     console.log("");
 
     console.log(
-        `[DEBUG] Membuka ${packageName}`
+        "========================================"
     );
-
-
-    await execSu(
-        `am start --windowingMode 5 -n ${packageName}/com.roblox.client.ActivityProtocolLaunch`
-    );
-
 
     console.log(
-        `[DEBUG] ${packageName} dibuka`
+        `ROBLOX ${index + 1}/10`
     );
+
+    console.log(
+        `PACKAGE: ${packageName}`
+    );
+
+    console.log(
+        `POSITION: ${slot.x}, ${slot.y}`
+    );
+
+    console.log(
+        `SIZE: ${slot.width}x${slot.height}`
+    );
+
+    console.log(
+        "========================================"
+    );
+
+
+    // =====================================
+    // OPEN
+    // =====================================
+
+    const opened =
+        await openRoblox(
+            packageName
+        );
+
+
+    if (!opened) {
+
+        return false;
+
+    }
+
+
+    // =====================================
+    // WAIT TASK
+    // =====================================
+
+    console.log("");
+
+    console.log(
+        `[DEBUG] Menunggu Task ${packageName}...`
+    );
+
+
+    await wait(
+        5000
+    );
+
+
+    // =====================================
+    // RESIZE
+    // =====================================
+
+    const resized =
+        await resizeRoblox(
+            packageName,
+            slot.x,
+            slot.y,
+            slot.width,
+            slot.height
+        );
+
+
+    if (!resized) {
+
+        console.log("");
+
+        console.log(
+            `[FAILED] ${packageName} gagal di-resize`
+        );
+
+        return false;
+
+    }
+
+
+    console.log("");
+
+    console.log(
+        `[SUCCESS] ROBLOX ${index + 1} SELESAI`
+    );
+
+
+    return true;
 
 }
 
@@ -250,7 +491,19 @@ async function main() {
     );
 
     console.log(
-        "ROBLOX 2 RESIZE DEBUG"
+        "ROBLOX 10 RESIZE DEBUG"
+    );
+
+    console.log(
+        "5 COLUMNS x 2 ROWS"
+    );
+
+    console.log(
+        "WINDOW 256x360"
+    );
+
+    console.log(
+        "SCREEN 1280x720"
     );
 
     console.log(
@@ -259,79 +512,21 @@ async function main() {
 
 
     // =====================================
-    // BUKA ROBLOX 1
+    // OPEN ROBLOX SATU PER SATU
     // =====================================
 
-    await openRoblox(
-        ROBLOXES[0].package
-    );
+    for (
+        let i = 0;
+        i < ROBLOXES.length;
+        i++
+    ) {
 
+        await startRoblox(
+            ROBLOXES[i],
+            i
+        );
 
-    console.log("");
-
-    console.log(
-        "[DEBUG] Tunggu Roblox 1..."
-    );
-
-
-    await new Promise(
-        resolve =>
-            setTimeout(
-                resolve,
-                5000
-            )
-    );
-
-
-    // =====================================
-    // RESIZE ROBLOX 1
-    // =====================================
-
-    await resizeRoblox(
-        ROBLOXES[0].package,
-        ROBLOXES[0].x,
-        ROBLOXES[0].y,
-        ROBLOXES[0].width,
-        ROBLOXES[0].height
-    );
-
-
-    // =====================================
-    // BUKA ROBLOX 2
-    // =====================================
-
-    await openRoblox(
-        ROBLOXES[1].package
-    );
-
-
-    console.log("");
-
-    console.log(
-        "[DEBUG] Tunggu Roblox 2..."
-    );
-
-
-    await new Promise(
-        resolve =>
-            setTimeout(
-                resolve,
-                5000
-            )
-    );
-
-
-    // =====================================
-    // RESIZE ROBLOX 2
-    // =====================================
-
-    await resizeRoblox(
-        ROBLOXES[1].package,
-        ROBLOXES[1].x,
-        ROBLOXES[1].y,
-        ROBLOXES[1].width,
-        ROBLOXES[1].height
-    );
+    }
 
 
     // =====================================
@@ -345,7 +540,7 @@ async function main() {
     );
 
     console.log(
-        "SELESAI"
+        "SEMUA ROBLOX SELESAI"
     );
 
     console.log(
@@ -354,5 +549,9 @@ async function main() {
 
 }
 
+
+// =========================================
+// RUN
+// =========================================
 
 main();
