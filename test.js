@@ -1,16 +1,15 @@
-//tes
 const { exec } = require("child_process");
 
 const ROBLOX = [
     {
-        package: "com.roblox.clienv",
+        package: "com.roblox.clienu",
         x: 0,
         y: 0,
         width: 256,
         height: 360
     },
     {
-        package: "com.roblox.clienu",
+        package: "com.roblox.clienv",
         x: 256,
         y: 0,
         width: 256,
@@ -57,18 +56,39 @@ function execSu(command) {
 
 
 // =========================================
+// WAIT
+// =========================================
+
+function wait(ms) {
+
+    return new Promise(
+        resolve =>
+            setTimeout(
+                resolve,
+                ms
+            )
+    );
+
+}
+
+
+// =========================================
 // GET TASK ID
 // =========================================
 
 async function getTaskId(packageName) {
 
+    console.log("");
+
     console.log(
         `[DEBUG] Mencari Task ID: ${packageName}`
     );
 
+
     const output = await execSu(
-        `dumpsys activity activities`
+        "dumpsys activity activities"
     );
+
 
     if (!output) {
 
@@ -81,20 +101,12 @@ async function getTaskId(packageName) {
     }
 
 
-    // =====================================
-    // ESCAPE PACKAGE
-    // =====================================
-
     const escapedPackage =
         packageName.replace(
             /[.*+?^${}()|[\]\\]/g,
             "\\$&"
         );
 
-
-    // =====================================
-    // CARI TASK ID
-    // =====================================
 
     const regex = new RegExp(
         `Task id #(\\d+)[\\s\\S]{0,1000}?A=${escapedPackage}`,
@@ -127,7 +139,7 @@ async function getTaskId(packageName) {
 
 
     console.log(
-        `[DEBUG] Task ID ditemukan: ${taskId}`
+        `[DEBUG] Task ID: ${taskId}`
     );
 
 
@@ -137,20 +149,79 @@ async function getTaskId(packageName) {
 
 
 // =========================================
-// RESIZE ROBLOX
+// OPEN ROBLOX FULLSCREEN
 // =========================================
 
-async function resizeRoblox(
-    packageName,
-    x,
-    y,
-    width,
-    height
-) {
+async function openRoblox(packageName) {
+
+    console.log("");
+
+    console.log(
+        "========================================"
+    );
+
+    console.log(
+        `[DEBUG] Membuka ${packageName}`
+    );
+
+    console.log(
+        "========================================"
+    );
+
+
+    // =====================================
+    // FORCE STOP
+    // =====================================
+
+    await execSu(
+        `am force-stop ${packageName}`
+    );
+
+
+    await wait(
+        1000
+    );
+
+
+    // =====================================
+    // OPEN NORMAL / FULLSCREEN
+    // =====================================
+
+    console.log(
+        `[DEBUG] Launch fullscreen ${packageName}`
+    );
+
+
+    await execSu(
+        `am start -n ${packageName}/com.roblox.client.ActivityProtocolLaunch`
+    );
+
+
+    // =====================================
+    // TUNGGU ROBLOX LOAD
+    // =====================================
+
+    console.log(
+        "[DEBUG] Menunggu Roblox fullscreen..."
+    );
+
+
+    await wait(
+        7000
+    );
+
+}
+
+
+// =========================================
+// RESIZE
+// =========================================
+
+async function resizeRoblox(config) {
 
     const taskId =
         await getTaskId(
-            packageName
+            config.package
         );
 
 
@@ -164,7 +235,7 @@ async function resizeRoblox(
     console.log("");
 
     console.log(
-        `[DEBUG] Resize ${packageName}`
+        `[DEBUG] Resize ${config.package}`
     );
 
     console.log(
@@ -172,38 +243,34 @@ async function resizeRoblox(
     );
 
     console.log(
-        `X       : ${x}`
+        `X       : ${config.x}`
     );
 
     console.log(
-        `Y       : ${y}`
+        `Y       : ${config.y}`
     );
 
     console.log(
-        `Width   : ${width}`
+        `Width   : ${config.width}`
     );
 
     console.log(
-        `Height  : ${height}`
+        `Height  : ${config.height}`
     );
 
-
-    // =====================================
-    // COMMAND SAMA SEPERTI CLienU
-    // =====================================
 
     const command =
         `am task resize ${taskId} ` +
-        `${x} ` +
-        `${y} ` +
-        `${width} ` +
-        `${height}`;
+        `${config.x} ` +
+        `${config.y} ` +
+        `${config.width} ` +
+        `${config.height}`;
 
 
     console.log("");
 
     console.log(
-        `[DEBUG] Command: ${command}`
+        `[DEBUG] ${command}`
     );
 
 
@@ -213,15 +280,13 @@ async function resizeRoblox(
         );
 
 
-    if (result !== null) {
-
-        console.log("");
+    if (result === null) {
 
         console.log(
-            `[SUCCESS] ${packageName} berhasil di-resize`
+            `[FAILED] Resize ${config.package}`
         );
 
-        return true;
+        return false;
 
     }
 
@@ -229,85 +294,28 @@ async function resizeRoblox(
     console.log("");
 
     console.log(
-        `[FAILED] Gagal resize ${packageName}`
+        `[SUCCESS] Resize command dikirim ke ${config.package}`
     );
 
 
-    return false;
+    return true;
 
 }
 
 
 // =========================================
-// OPEN + RESIZE ROBLOX
+// OPEN + RESIZE
 // =========================================
 
-async function openAndResize(
-    config
-) {
+async function openAndResize(config) {
 
-    console.log("");
-
-    console.log(
-        "========================================"
+    await openRoblox(
+        config.package
     );
 
-    console.log(
-        `MEMBUKA ${config.package}`
-    );
-
-    console.log(
-        "========================================"
-    );
-
-
-    // =====================================
-    // OPEN FREEFORM
-    // =====================================
-
-    console.log("");
-
-    console.log(
-        `[DEBUG] Membuka ${config.package}`
-    );
-
-
-    await execSu(
-        `am start --windowingMode 5 -n ${config.package}/com.roblox.client.ActivityProtocolLaunch`
-    );
-
-
-    // =====================================
-    // WAIT TASK
-    // SAMA SEPERTI VERSI YANG BERHASIL
-    // =====================================
-
-    console.log("");
-
-    console.log(
-        "[DEBUG] Menunggu Task Roblox..."
-    );
-
-
-    await new Promise(
-        resolve =>
-            setTimeout(
-                resolve,
-                5000
-            )
-    );
-
-
-    // =====================================
-    // RESIZE
-    // =====================================
 
     await resizeRoblox(
-        config.package,
-        config.x,
-        config.y,
-        config.width,
-        config.height
+        config
     );
 
 }
@@ -326,7 +334,7 @@ async function main() {
     );
 
     console.log(
-        "ROBLOX 2 RESIZE DEBUG"
+        "ROBLOX FULLSCREEN -> RESIZE DEBUG"
     );
 
     console.log(
