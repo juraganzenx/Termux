@@ -1,4 +1,4 @@
-// REJOINGAG44.JS
+// REJOINGAG4.JS
 // PUBLIC + PRIVATE
 // BUKA 1 PER 1
 // AUTO RESIZE ROBLOX 5x2
@@ -68,6 +68,179 @@ const packages = [
 
 
 // =========================================
+// LOGGING (console saat startup, file saat dashboard aktif)
+// =========================================
+
+const LOG_FILE = "activity.log";
+
+let VERBOSE = true; // true = tampil di console, false = hanya ke file (dashboard mode)
+
+function log(...args) {
+
+    const msg = args.length ? args.join(" ") : "";
+
+    if (VERBOSE) {
+
+        console.log(msg);
+
+    }
+
+    try {
+
+        const line =
+            msg === ""
+                ? ""
+                : `[${new Date().toLocaleTimeString()}] ${msg}`;
+
+        fs.appendFileSync(LOG_FILE, line + "\n");
+
+    } catch (e) {}
+
+}
+
+
+// =========================================
+// STATUS DASHBOARD HELPERS
+// =========================================
+
+function setStatus(account, status) {
+
+    account.status = status;
+
+    account.statusSince = Date.now();
+
+}
+
+function presenceText(status) {
+
+    switch (status) {
+
+        case 0: return "Offline";
+        case 1: return "Online";
+        case 2: return "In Game";
+        case 3: return "In Studio";
+        default: return "Unknown";
+
+    }
+
+}
+
+function pad(value, len) {
+
+    const str = String(value);
+
+    if (str.length >= len) {
+
+        return str.slice(0, len - 1) + " ";
+
+    }
+
+    return str + " ".repeat(len - str.length);
+
+}
+
+function formatDuration(ms) {
+
+    const totalSec = Math.max(0, Math.floor(ms / 1000));
+
+    const m = Math.floor(totalSec / 60);
+
+    const s = totalSec % 60;
+
+    return `${m}m ${s}s`;
+
+}
+
+const COLORS = {
+
+    reset: "\x1b[0m",
+    green: "\x1b[32m",
+    red: "\x1b[31m",
+    yellow: "\x1b[33m",
+    cyan: "\x1b[36m",
+    gray: "\x1b[90m"
+
+};
+
+function colorForStatus(status) {
+
+    switch (status) {
+
+        case "In Game":
+            return COLORS.green;
+
+        case "Offline":
+        case "Timeout":
+            return COLORS.red;
+
+        case "Rejoin":
+        case "Restart":
+            return COLORS.yellow;
+
+        case "Membuka":
+        case "Menunggu Masuk":
+        case "Online":
+        case "In Studio":
+            return COLORS.cyan;
+
+        default:
+            return COLORS.gray;
+
+    }
+
+}
+
+function renderDashboard(accounts) {
+
+    let out = "";
+
+    out += "========================================\n";
+    out += "        ROBLOX STATUS DASHBOARD\n";
+    out += "========================================\n";
+
+    out +=
+        pad("SLOT", 6) +
+        pad("USERNAME", 16) +
+        pad("STATUS", 16) +
+        pad("DURASI", 10) +
+        "\n";
+
+    out += "----------------------------------------------\n";
+
+    accounts.forEach((acc, i) => {
+
+        const durasi = formatDuration(
+            Date.now() - (acc.statusSince || Date.now())
+        );
+
+        const statusPadded = pad(acc.status || "-", 16);
+
+        const statusColored =
+            colorForStatus(acc.status) +
+            statusPadded +
+            COLORS.reset;
+
+        out +=
+            pad(i + 1, 6) +
+            pad(acc.username, 16) +
+            statusColored +
+            pad(durasi, 10) +
+            "\n";
+
+    });
+
+    out += "========================================\n";
+
+    out += `Update: ${new Date().toLocaleTimeString()}   | log lengkap: ${LOG_FILE}\n`;
+
+    console.clear();
+
+    process.stdout.write(out);
+
+}
+
+
+// =========================================
 // READLINE
 // =========================================
 
@@ -125,13 +298,13 @@ function execSu(command) {
 
                 if (err) {
 
-                    console.log(
+                    log(
                         `[SU ERROR] ${err.message}`
                     );
 
                     if (stderr) {
 
-                        console.log(
+                        log(
                             `[SU STDERR] ${stderr.trim()}`
                         );
 
@@ -256,7 +429,7 @@ async function usernameToUserId(username) {
 
     } catch (err) {
 
-        console.log(
+        log(
 
             `[ERROR] Username lookup gagal: ${username}`
 
@@ -313,7 +486,7 @@ async function getPresence(userId) {
 
     } catch (err) {
 
-        console.log(
+        log(
 
             `[${userId}] Presence error`
 
@@ -407,9 +580,9 @@ function getRobloxSlot(account) {
 
 async function getTaskId(packageName) {
 
-    console.log("");
+    log("");
 
-    console.log(
+    log(
 
         `[${packageName}] Mencari Task ID...`
 
@@ -427,7 +600,7 @@ async function getTaskId(packageName) {
 
     if (!output) {
 
-        console.log(
+        log(
 
             `[${packageName}] Gagal membaca dumpsys`
 
@@ -471,9 +644,9 @@ async function getTaskId(packageName) {
 
     if (!match) {
 
-        console.log("");
+        log("");
 
-        console.log(
+        log(
 
             `[${packageName}] ❌ Task ID tidak ditemukan`
 
@@ -495,9 +668,9 @@ async function getTaskId(packageName) {
         );
 
 
-    console.log("");
+    log("");
 
-    console.log(
+    log(
 
         `[${packageName}] Task ID: ${taskId}`
 
@@ -515,9 +688,9 @@ async function getTaskId(packageName) {
 
 async function debugRobloxWindow(packageName) {
 
-    console.log("");
+    log("");
 
-    console.log(
+    log(
 
         `[${packageName}] ===== DEBUG WINDOW =====`
 
@@ -535,7 +708,7 @@ async function debugRobloxWindow(packageName) {
 
     if (!output) {
 
-        console.log(
+        log(
 
             `[${packageName}] Tidak ada output window`
 
@@ -546,13 +719,13 @@ async function debugRobloxWindow(packageName) {
     }
 
 
-    console.log("");
+    log("");
 
-    console.log(output);
+    log(output);
 
-    console.log("");
+    log("");
 
-    console.log(
+    log(
 
         `[${packageName}] ===== END DEBUG =====`
 
@@ -573,16 +746,16 @@ async function forceRobloxFreeform(
 
 ) {
 
-    console.log("");
+    log("");
 
-    console.log(
+    log(
 
         `[${packageName}] Mengaktifkan Freeform...`
 
     );
 
 
-    console.log(
+    log(
 
         `[${packageName}] Task ID: ${taskId}`
 
@@ -598,16 +771,16 @@ async function forceRobloxFreeform(
         `am task move-to-front ${taskId}`;
 
     
-    console.log("");
+    log("");
 
-    console.log(
+    log(
 
         `[${packageName}] Move task to front:`
 
     );
 
 
-    console.log(
+    log(
 
         command
 
@@ -639,16 +812,16 @@ async function forceRobloxFreeform(
         `-n ${packageName}/com.roblox.client.ActivityProtocolLaunch`;
 
 
-    console.log("");
+    log("");
 
-    console.log(
+    log(
 
         `[${packageName}] Freeform command:`
 
     );
 
 
-    console.log(
+    log(
 
         freeformCommand
 
@@ -666,9 +839,9 @@ async function forceRobloxFreeform(
 
     if (result === null) {
 
-        console.log("");
+        log("");
 
-        console.log(
+        log(
 
             `[${packageName}] ⚠️ Freeform command error`
 
@@ -715,9 +888,9 @@ async function resizeRoblox(account) {
 
     if (!slot) {
 
-        console.log("");
+        log("");
 
-        console.log(
+        log(
 
             `[${packageName}] ❌ Slot tidak ditemukan`
 
@@ -728,44 +901,44 @@ async function resizeRoblox(account) {
     }
 
 
-    console.log("");
+    log("");
 
-    console.log(
+    log(
 
         "========================================"
 
     );
 
 
-    console.log(
+    log(
 
         `[${packageName}] RESIZE ROBLOX`
 
     );
 
 
-    console.log(
+    log(
 
         `Slot     : ${slot.index + 1}/10`
 
     );
 
 
-    console.log(
+    log(
 
         `Position : ${slot.x},${slot.y}`
 
     );
 
 
-    console.log(
+    log(
 
         `Size     : ${slot.width}x${slot.height}`
 
     );
 
 
-    console.log(
+    log(
 
         "========================================"
 
@@ -787,9 +960,9 @@ async function resizeRoblox(account) {
 
     if (!taskId) {
 
-        console.log("");
+        log("");
 
-        console.log(
+        log(
 
             `[${packageName}] Task belum ditemukan`
 
@@ -829,9 +1002,9 @@ async function resizeRoblox(account) {
 
     if (!taskId) {
 
-        console.log("");
+        log("");
 
-        console.log(
+        log(
 
             `[${packageName}] Task ID hilang setelah Freeform`
 
@@ -860,18 +1033,18 @@ async function resizeRoblox(account) {
         `${slot.height}`;
 
 
-    console.log("");
+    log("");
 
-    console.log(
+    log(
 
         `[${packageName}] Menjalankan resize...`
 
     );
 
 
-    console.log("");
+    log("");
 
-    console.log(
+    log(
 
         `[COMMAND] ${resizeCommand}`
 
@@ -889,9 +1062,9 @@ async function resizeRoblox(account) {
 
     if (result === null) {
 
-        console.log("");
+        log("");
 
-        console.log(
+        log(
 
             `[${packageName}] ❌ Resize command gagal`
 
@@ -918,9 +1091,9 @@ async function resizeRoblox(account) {
     // DEBUG HASIL
     // =====================================
 
-    console.log("");
+    log("");
 
-    console.log(
+    log(
 
         `[${packageName}] Mengecek hasil resize...`
 
@@ -934,9 +1107,9 @@ async function resizeRoblox(account) {
     );
 
 
-    console.log("");
+    log("");
 
-    console.log(
+    log(
 
         `[${packageName}] ✅ Resize command selesai`
 
@@ -958,13 +1131,15 @@ function openRoblox(account) {
     return new Promise(resolve => {
 
 
-        console.log("");
+        log("");
 
-        console.log(
+        log(
 
             `[${account.username}] Restart Roblox`
 
         );
+
+        setStatus(account, "Membuka");
 
 
         // =================================
@@ -980,7 +1155,7 @@ function openRoblox(account) {
 
                 if (err) {
 
-                    console.log(
+                    log(
 
                         `[${account.username}] Stop error: ${err.message}`
 
@@ -988,7 +1163,7 @@ function openRoblox(account) {
 
                 } else {
 
-                    console.log(
+                    log(
 
                         `[${account.username}] Roblox closed`
 
@@ -1025,16 +1200,16 @@ function openRoblox(account) {
                             `https://www.roblox.com/games/start?placeId=${account.placeId}`;
 
 
-                        console.log("");
+                        log("");
 
-                        console.log(
+                        log(
 
                             `[${account.username}] Mode: PUBLIC`
 
                         );
 
 
-                        console.log(
+                        log(
 
                             `[${account.username}] Place ID: ${account.placeId}`
 
@@ -1056,16 +1231,16 @@ function openRoblox(account) {
                             `https://www.roblox.com/share?code=${account.serverCode}&type=Server`;
 
 
-                        console.log("");
+                        log("");
 
-                        console.log(
+                        log(
 
                             `[${account.username}] Mode: PRIVATE SERVER`
 
                         );
 
 
-                        console.log(
+                        log(
 
                             `[${account.username}] Server Code: ${account.serverCode}`
 
@@ -1075,18 +1250,18 @@ function openRoblox(account) {
                     }
 
 
-                    console.log("");
+                    log("");
 
-                    console.log(
+                    log(
 
                         `[${account.username}] Opening Roblox...`
 
                     );
 
 
-                    console.log("");
+                    log("");
 
-                    console.log(
+                    log(
 
                         `[${account.username}] Link: ${link}`
 
@@ -1108,9 +1283,9 @@ function openRoblox(account) {
                         `-p ${account.package}`;
 
 
-                    console.log("");
+                    log("");
 
-                    console.log(
+                    log(
 
                         `[DEBUG] ${command}`
 
@@ -1127,9 +1302,9 @@ function openRoblox(account) {
                             if (err) {
 
 
-                                console.log("");
+                                log("");
 
-                                console.log(
+                                log(
 
                                     `[${account.username}] ❌ Open error: ${err.message}`
 
@@ -1143,9 +1318,9 @@ function openRoblox(account) {
                             }
 
 
-                            console.log("");
+                            log("");
 
-                            console.log(
+                            log(
 
                                 `[${account.username}] ✅ Launch OK`
 
@@ -1182,8 +1357,10 @@ function waitUntilInGame(account) {
 
     return new Promise(resolve => {
 
-        console.log("");
-        console.log(`[${account.username}] Menunggu masuk game...`);
+        log("");
+        log(`[${account.username}] Menunggu masuk game...`);
+
+        setStatus(account, "Menunggu Masuk");
 
         const started = Date.now();
 
@@ -1197,7 +1374,7 @@ function waitUntilInGame(account) {
 
             const status = presence.userPresenceType;
 
-            console.log(`[${account.username}] Presence: ${status}`);
+            log(`[${account.username}] Presence: ${status}`);
 
             // Berhasil masuk game
             if (status === 2) {
@@ -1207,8 +1384,10 @@ function waitUntilInGame(account) {
                 account.offlineSince = null;
                 account.lastStatus = 2;
 
-                console.log("");
-                console.log(`[${account.username}] ✅ Berhasil masuk game`);
+                setStatus(account, "In Game");
+
+                log("");
+                log(`[${account.username}] ✅ Berhasil masuk game`);
 
                 resolve(true);
                 return;
@@ -1219,8 +1398,10 @@ function waitUntilInGame(account) {
 
                 clearInterval(check);
 
-                console.log("");
-                console.log(`[${account.username}] ❌ Timeout masuk game`);
+                setStatus(account, "Timeout");
+
+                log("");
+                log(`[${account.username}] ❌ Timeout masuk game`);
 
                 resolve(false);
             }
@@ -1238,33 +1419,33 @@ function waitUntilInGame(account) {
 
 async function startAccount(account) {
 
-    console.log("");
+    log("");
 
-    console.log(
+    log(
 
         "========================================"
 
     );
 
-    console.log(
+    log(
 
         `ROBLOX ${packages.indexOf(account.package) + 1}/${packages.length}`
 
     );
 
-    console.log(
+    log(
 
         `USERNAME: ${account.username}`
 
     );
 
-    console.log(
+    log(
 
         `PACKAGE: ${account.package}`
 
     );
 
-    console.log(
+    log(
 
         "========================================"
 
@@ -1286,9 +1467,9 @@ async function startAccount(account) {
 
     if (!launched) {
 
-        console.log("");
+        log("");
 
-        console.log(
+        log(
 
             `[${account.username}] ❌ Gagal launch`
 
@@ -1307,8 +1488,10 @@ async function startAccount(account) {
 
     while (!success) {
 
-        console.log("");
-        console.log(`[${account.username}] Force close lalu buka ulang...`);
+        log("");
+        log(`[${account.username}] Force close lalu buka ulang...`);
+
+        setStatus(account, "Restart");
 
         await execSu(`am force-stop ${account.package}`);
         await sleep(3000);
@@ -1324,9 +1507,9 @@ async function startAccount(account) {
     }
 
 
-    console.log("");
+    log("");
 
-    console.log(
+    log(
 
         `[${account.username}] ✅ Siap`
 
@@ -1337,9 +1520,9 @@ async function startAccount(account) {
     // WAIT EXTRA
     // =====================================
 
-    console.log("");
+    log("");
 
-    console.log(
+    log(
 
         `[${account.username}] Menunggu 2 detik sebelum resize...`
 
@@ -1368,9 +1551,9 @@ async function startAccount(account) {
 
     if (!resized) {
 
-        console.log("");
+        log("");
 
-        console.log(
+        log(
 
             `[${account.username}] ⚠️ Resize gagal`
 
@@ -1378,9 +1561,9 @@ async function startAccount(account) {
 
     } else {
 
-        console.log("");
+        log("");
 
-        console.log(
+        log(
 
             `[${account.username}] ✅ Resize selesai`
 
@@ -1401,9 +1584,9 @@ async function startAccount(account) {
 function monitorAccount(account) {
 
 
-    console.log("");
+    log("");
 
-    console.log(
+    log(
 
         `[START] Monitoring ${account.username}`
 
@@ -1455,7 +1638,9 @@ function monitorAccount(account) {
                 ) {
 
 
-                    console.log(
+                    setStatus(account, "In Game");
+
+                    log(
 
                         `[${account.username}] ✅ In Game`
 
@@ -1491,7 +1676,9 @@ function monitorAccount(account) {
             ) {
 
 
-                console.log(
+                setStatus(account, presenceText(status));
+
+                log(
 
                     `[${account.username}] Status ${status}`
 
@@ -1551,13 +1738,15 @@ function monitorAccount(account) {
             ) {
 
 
-                console.log("");
+                log("");
 
-                console.log(
+                log(
 
                     `[${account.username}] 🔄 Rejoin`
 
                 );
+
+                setStatus(account, "Rejoin");
 
 
                 // =================================
@@ -1588,7 +1777,9 @@ function monitorAccount(account) {
 
                         while (!success) {
 
-                            console.log(`[${account.username}] Timeout, restart Roblox...`);
+                            log(`[${account.username}] Timeout, restart Roblox...`);
+
+                            setStatus(account, "Restart");
 
                             await execSu(`am force-stop ${account.package}`);
                             await sleep(3000);
@@ -1606,9 +1797,9 @@ function monitorAccount(account) {
                         await resizeRoblox(account);
 
 
-                        console.log("");
+                        log("");
 
-                        console.log(
+                        log(
 
                             `[${account.username}] ✅ Rejoin + Resize selesai`
 
@@ -1781,7 +1972,9 @@ async function createConfig() {
                 placeId: placeId,
                 serverCode: null,
                 offlineSince: null,
-                lastStatus: null
+                lastStatus: null,
+                status: "Offline",
+                statusSince: Date.now()
 
             });
 
@@ -1823,7 +2016,9 @@ async function createConfig() {
             placeId: null,
             serverCode: extractCode(privateServer),
             offlineSince: null,
-            lastStatus: null
+            lastStatus: null,
+            status: "Offline",
+            statusSince: Date.now()
 
         });
 
@@ -1890,7 +2085,7 @@ async function loadAccounts() {
         );
 
 
-        return JSON.parse(
+        const data = JSON.parse(
 
             fs.readFileSync(
 
@@ -1901,6 +2096,17 @@ async function loadAccounts() {
             )
 
         );
+
+        // pastikan field status ada (untuk accounts.json lama)
+        data.forEach(acc => {
+
+            if (!acc.status) acc.status = "Offline";
+
+            if (!acc.statusSince) acc.statusSince = Date.now();
+
+        });
+
+        return data;
 
 
     }
@@ -2107,9 +2313,29 @@ async function main() {
 
     console.log(
 
-        "Monitoring berjalan..."
+        "Mengaktifkan dashboard status dalam 3 detik..."
 
     );
+
+    console.log(
+
+        `Log detail selanjutnya disimpan ke: ${LOG_FILE}`
+
+    );
+
+
+    await sleep(3000);
+
+
+    // =========================================
+    // MULAI DASHBOARD (matikan log verbose di console)
+    // =========================================
+
+    VERBOSE = false;
+
+    renderDashboard(accounts);
+
+    setInterval(() => renderDashboard(accounts), 2000);
 
 
     // =========================================
