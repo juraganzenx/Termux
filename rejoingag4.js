@@ -1,4 +1,4 @@
-// REJOINGAG4.JS
+// REJOINGAG44.JS
 // PUBLIC + PRIVATE
 // BUKA 1 PER 1
 // AUTO RESIZE ROBLOX 5x2
@@ -1696,34 +1696,45 @@ async function createConfig() {
     console.log("Private: username-LINK_PRIVATE_SERVER");
     console.log("");
     console.log("Contoh:");
-    console.log("sangjuki-public-123456");
-    console.log("sangji-public-123456");
-    console.log("sangki-public-123456");
+    console.log("A7K2QX-public-97598239454123");
+    console.log("M9R4TB-public-97598239454123");
     console.log("");
-    console.log(`Masukkan ${count} account.`);
-    console.log("Tekan ENTER pada baris kosong jika selesai.");
+    console.log(`Paste ${count} account, lalu tekan CTRL+D jika selesai.`);
     console.log("========================================");
 
-    const inputs = [];
+    // Tutup readline supaya stdin bisa dipakai langsung
+    rl.close();
 
-    while (true) {
+    const inputs = await new Promise(resolve => {
 
-        const line = await ask("");
+        let text = "";
 
-        if (!line.trim()) {
-            break;
-        }
+        process.stdin.resume();
+        process.stdin.setEncoding("utf8");
 
-        inputs.push(line.trim());
+        process.stdin.on("data", chunk => {
+            text += chunk;
+        });
 
-    }
+        process.stdin.on("end", () => {
+
+            const lines = text
+                .split(/\r?\n/)
+                .map(v => v.trim())
+                .filter(v => v.length > 0);
+
+            resolve(lines);
+
+        });
+
+    });
 
     if (inputs.length !== count) {
 
         console.log("");
-        console.log(`Jumlah account tidak sesuai.`);
-        console.log(`Diminta : ${count}`);
-        console.log(`Dimasukkan : ${inputs.length}`);
+        console.log("Jumlah account tidak sesuai.");
+        console.log(`Diminta     : ${count}`);
+        console.log(`Dimasukkan  : ${inputs.length}`);
 
         process.exit(0);
 
@@ -1742,26 +1753,17 @@ async function createConfig() {
         // =====================================
 
         const publicMatch =
-            input.match(
-                /^([^-]+)-public-(\d+)$/
-            );
+            input.match(/^([^-]+)-public-(\d+)$/);
 
         if (publicMatch) {
 
-            const username =
-                publicMatch[1].trim();
+            const username = publicMatch[1].trim();
+            const placeId = publicMatch[2].trim();
 
-            const placeId =
-                publicMatch[2].trim();
-
-            console.log("");
             console.log(`[${username}] Mode PUBLIC`);
             console.log(`Place ID: ${placeId}`);
 
-            const userId =
-                await usernameToUserId(
-                    username
-                );
+            const userId = await usernameToUserId(username);
 
             if (!userId) {
 
@@ -1772,29 +1774,14 @@ async function createConfig() {
 
             accounts.push({
 
-                package:
-                    packages[i],
-
-                username:
-                    username,
-
-                userId:
-                    userId,
-
-                serverType:
-                    "public",
-
-                placeId:
-                    placeId,
-
-                serverCode:
-                    null,
-
-                offlineSince:
-                    null,
-
-                lastStatus:
-                    null
+                package: packages[i],
+                username: username,
+                userId: userId,
+                serverType: "public",
+                placeId: placeId,
+                serverCode: null,
+                offlineSince: null,
+                lastStatus: null
 
             });
 
@@ -1803,30 +1790,22 @@ async function createConfig() {
         }
 
         // =====================================
-        // PRIVATE SERVER
+        // PRIVATE
         // =====================================
 
-        const split =
-            input.split("-");
+        const split = input.split("-");
 
         if (split.length < 2) {
 
-            console.log("");
             console.log(`Format salah pada baris ${i + 1}`);
             process.exit(0);
 
         }
 
-        const username =
-            split.shift().trim();
+        const username = split.shift().trim();
+        const privateServer = split.join("-").trim();
 
-        const privateServer =
-            split.join("-").trim();
-
-        const userId =
-            await usernameToUserId(
-                username
-            );
+        const userId = await usernameToUserId(username);
 
         if (!userId) {
 
@@ -1837,31 +1816,14 @@ async function createConfig() {
 
         accounts.push({
 
-            package:
-                packages[i],
-
-            username:
-                username,
-
-            userId:
-                userId,
-
-            serverType:
-                "private",
-
-            placeId:
-                null,
-
-            serverCode:
-                extractCode(
-                    privateServer
-                ),
-
-            offlineSince:
-                null,
-
-            lastStatus:
-                null
+            package: packages[i],
+            username: username,
+            userId: userId,
+            serverType: "private",
+            placeId: null,
+            serverCode: extractCode(privateServer),
+            offlineSince: null,
+            lastStatus: null
 
         });
 
