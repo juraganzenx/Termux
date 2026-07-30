@@ -1,4 +1,4 @@
-// REJOINGAG3.JS
+// REJOINGAG4.JS
 // PUBLIC + PRIVATE
 // BUKA 1 PER 1
 // AUTO RESIZE ROBLOX 5x2
@@ -1682,327 +1682,225 @@ async function createConfig() {
 
     const accounts = [];
 
-
     // =========================================
     // INPUT ACCOUNT
     // =========================================
 
-    for (
+    console.log("");
+    console.log("========================================");
+    console.log("PASTE SEMUA ACCOUNT");
+    console.log("========================================");
+    console.log("1 Baris = 1 Account");
+    console.log("");
+    console.log("Public : username-public-PLACE_ID");
+    console.log("Private: username-LINK_PRIVATE_SERVER");
+    console.log("");
+    console.log("Contoh:");
+    console.log("sangjuki-public-123456");
+    console.log("sangji-public-123456");
+    console.log("sangki-public-123456");
+    console.log("");
+    console.log(`Masukkan ${count} account.`);
+    console.log("Tekan ENTER pada baris kosong jika selesai.");
+    console.log("========================================");
 
-        let i = 0;
+    const inputs = [];
 
-        i < count;
+    while (true) {
 
-        i++
+        const line = await ask("");
 
-    ) {
+        if (!line.trim()) {
+            break;
+        }
 
+        inputs.push(line.trim());
 
-        console.log("");
+    }
 
-        console.log(
-
-            `===== ROBLOX ${i + 1} =====`
-
-        );
-
-
-        console.log(
-
-            `Package : ${packages[i]}`
-
-        );
-
-
-        console.log("");
-
-        console.log(
-
-            "Format Public : username-public-PLACE_ID"
-
-        );
-
-
-        console.log(
-
-            "Format Private: username-LINK_PRIVATE_SERVER"
-
-        );
-
+    if (inputs.length !== count) {
 
         console.log("");
+        console.log(`Jumlah account tidak sesuai.`);
+        console.log(`Diminta : ${count}`);
+        console.log(`Dimasukkan : ${inputs.length}`);
 
+        process.exit(0);
 
-        const input =
+    }
 
-            await ask(
+    for (let i = 0; i < inputs.length; i++) {
 
-                "USERNAME-SERVER : "
+        const input = inputs[i];
 
-            );
-
+        console.log("");
+        console.log(`===== ROBLOX ${i + 1} =====`);
+        console.log(`Package : ${packages[i]}`);
 
         // =====================================
         // PUBLIC
         // =====================================
 
         const publicMatch =
-
             input.match(
-
                 /^([^-]+)-public-(\d+)$/
-
             );
-
 
         if (publicMatch) {
 
-
             const username =
-
                 publicMatch[1].trim();
 
-
             const placeId =
-
                 publicMatch[2].trim();
 
-
             console.log("");
-
-            console.log(
-
-                `[${username}] Mode PUBLIC`
-
-            );
-
-
-            console.log(
-
-                `Place ID: ${placeId}`
-
-            );
-
-
-            // =================================
-            // GET USER ID
-            // =================================
+            console.log(`[${username}] Mode PUBLIC`);
+            console.log(`Place ID: ${placeId}`);
 
             const userId =
-
                 await usernameToUserId(
-
                     username
-
                 );
-
 
             if (!userId) {
 
-
-                console.log(
-
-                    "Username tidak ditemukan"
-
-                );
-
-
-                i--;
-
-                continue;
+                console.log("Username tidak ditemukan");
+                process.exit(0);
 
             }
-
 
             accounts.push({
 
                 package:
-
                     packages[i],
 
                 username:
-
                     username,
 
                 userId:
-
                     userId,
 
                 serverType:
-
                     "public",
 
                 placeId:
-
                     placeId,
 
                 serverCode:
-
                     null,
 
                 offlineSince:
-
                     null,
 
                 lastStatus:
-
                     null
 
             });
 
-
             continue;
 
         }
-
 
         // =====================================
         // PRIVATE SERVER
         // =====================================
 
         const split =
-
             input.split("-");
 
+        if (split.length < 2) {
 
-        if (
-
-            split.length < 2
-
-        ) {
-
-
-            console.log(
-
-                "Format salah!"
-
-            );
-
-
-            i--;
-
-            continue;
+            console.log("");
+            console.log(`Format salah pada baris ${i + 1}`);
+            process.exit(0);
 
         }
 
-
         const username =
-
             split.shift().trim();
 
-
         const privateServer =
-
             split.join("-").trim();
 
-
-        // =================================
-        // GET USER ID
-        // =================================
-
         const userId =
-
             await usernameToUserId(
-
                 username
-
             );
-
 
         if (!userId) {
 
-
-            console.log(
-
-                "Username tidak ditemukan"
-
-            );
-
-
-            i--;
-
-            continue;
+            console.log("Username tidak ditemukan");
+            process.exit(0);
 
         }
-
 
         accounts.push({
 
             package:
-
                 packages[i],
 
             username:
-
                 username,
 
             userId:
-
                 userId,
 
             serverType:
-
                 "private",
 
             placeId:
-
                 null,
 
             serverCode:
-
                 extractCode(
-
                     privateServer
-
                 ),
 
             offlineSince:
-
                 null,
 
             lastStatus:
-
                 null
 
         });
 
-
     }
 
 
-    // =========================================
-    // SAVE CONFIG
-    // =========================================
+        // =========================================
+        // SAVE CONFIG
+        // =========================================
 
-    fs.writeFileSync(
+        fs.writeFileSync(
 
-        CONFIG_FILE,
+            CONFIG_FILE,
 
-        JSON.stringify(
+            JSON.stringify(
 
-            accounts,
+                accounts,
 
-            null,
+                null,
 
-            2
+                2
 
-        )
+            )
 
-    );
-
-
-    console.log("");
-
-    console.log(
-
-        "accounts.json dibuat"
-
-    );
+        );
 
 
-    return accounts;
+        console.log("");
 
-}
+        console.log(
+
+            "accounts.json dibuat"
+
+        );
+
+
+        return accounts;
+
+    }
 
 
 // =========================================
