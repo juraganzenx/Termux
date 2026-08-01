@@ -1,4 +1,4 @@
-//REJOINGAG3.JS VERSI PUBLIK DAN PRIVATE//BUKA 1 PER 1 NUNGGU MASUK DULU
+//REJOINGAG3.JS VERSI PUBLIK DAN PRIVATE//BUKA 1 PER 1 NUNGGU MASUK DULUaa
 //+ GRID WINDOW LAYOUT (FREEFORM) BIAR TIDAK NUMPUK DI TENGAH
 
 const axios = require("axios");
@@ -111,7 +111,7 @@ async function getPresence(userId) {
 // Ambil ukuran layar via `wm size`
 async function getScreenSize() {
     try {
-        const output = await execAsync(`su -c "wm size"`);
+        const output = await execAsync(`su -c "/system/bin/wm size"`);
         // biasanya formatnya: "Physical size: 1080x2400"
         const match = output.match(/(\d+)x(\d+)/);
         if (match) {
@@ -181,7 +181,7 @@ function openRoblox(account, screen, totalAccounts) {
         // =====================================
         // STOP ROBLOX
         // =====================================
-        exec(`su -c "am force-stop ${account.package}"`, (err) => {
+        exec(`su -c "/system/bin/am force-stop ${account.package}"`, (err) => {
 
             if (err) {
                 console.log(`[${account.username}] Stop error: ${err.message}`);
@@ -236,8 +236,8 @@ function openRoblox(account, screen, totalAccounts) {
                 // OPEN ROBLOX (FREEFORM + BOUNDS)
                 // =================================
                 const command =
-                    `am start --windowingMode 5 --bounds ${bounds} ` +
-                    `-a android.intent.action.VIEW -d "${link}" -p ${account.package}`;
+                    `su -c "/system/bin/am start --windowingMode 5 --bounds ${bounds} ` +
+                    `-a android.intent.action.VIEW -d '${link}' -p ${account.package}"`;
 
                 console.log("");
                 console.log(`[DEBUG] ${command}`);
